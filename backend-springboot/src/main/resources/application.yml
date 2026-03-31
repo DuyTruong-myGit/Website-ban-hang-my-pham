@@ -1,17 +1,19 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: aurabeauty
   data:
     mongodb:
-      uri: mongodb://localhost:27017/cosmetics_db
+      uri: ${MONGODB_URI:mongodb://localhost:27017/cosmetics_db}
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: your-email@gmail.com
-    password: your-app-password
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -20,10 +22,10 @@ spring:
             enable: true
 
 jwt:
-  secret: 404E635266556A586E3272357538782F413F4428472B4B2E50645367566B5970
-  expiration: 86400000 # 24h in ms
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000} # 24h in ms
 
 cloudinary:
-  cloud-name: your-cloud-name
-  api-key: your-api-key
-  api-secret: your-api-secret
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
