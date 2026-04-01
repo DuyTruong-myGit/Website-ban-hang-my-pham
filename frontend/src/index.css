@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --hasaki-primary: #326E51;
+  --hasaki-secondary: #FF6600;
+  --hasaki-bg-gray: #F2F1F6;
+  --hasaki-text-main: #333333;
+  --hasaki-text-muted: #666666;
+  --hasaki-white: #FFFFFF;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--hasaki-bg-gray);
+  color: var(--hasaki-text-main);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--hasaki-primary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #28543f;
+}
+
+/* Utility Classes */
+.bg-hasaki { background-color: var(--hasaki-primary) !important; }
+.text-hasaki { color: var(--hasaki-primary) !important; }
+.bg-hasaki-secondary { background-color: var(--hasaki-secondary) !important; }
+.text-hasaki-secondary { color: var(--hasaki-secondary) !important; }
+
+/* Header and Navigation */
+.main-header {
+  height: 70px;
+  background-color: var(--hasaki-primary);
+}
+
+.topbar {
+  background-color: #f8f9fa;
+  font-size: 13px;
+  color: #666;
+  padding: 4px 0;
+}
+
+.search-container input {
+  border-radius: 20px;
+  padding-left: 20px;
+  border: none;
+}
+
+.nav-menu {
+  background-color: #fff;
+  border-bottom: 1px solid #ddd;
+}
+
+.nav-link-item {
+  color: #333;
+  font-weight: 500;
+  padding: 10px 15px;
+  text-decoration: none;
+}
+
+.nav-link-item:hover {
+  color: var(--hasaki-primary);
+}
+
+/* Hero Section */
+.hero-banner {
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+/* Category Circle */
+.category-item img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 10px;
+  transition: transform 0.3s;
+}
+
+.category-item:hover img {
+  transform: scale(1.05);
+}
+
+/* Product Card */
+.product-card {
+  border: none;
+  border-radius: 8px;
+  transition: box-shadow 0.3s;
+}
+
+.product-card:hover {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.discount-badge {
+  background-color: var(--hasaki-secondary);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+}
