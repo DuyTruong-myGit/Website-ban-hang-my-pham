@@ -8,16 +8,42 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 
-// Pages
+// Pages — TV1
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+
+// Pages — TV5
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminInventory from './pages/admin/AdminInventory';
+import AdminLogs from './pages/admin/AdminLogs';
+import StaffDashboard from './pages/staff/StaffDashboard';
+import StaffOrders from './pages/staff/StaffOrders';
 
 // Private Route Wrapper
 const PrivateRoute = ({ children }) => {
   const { token, loading } = useAuth();
   if (loading) return <div className="text-center mt-5">Đang tải...</div>;
   return token ? children : <Navigate to="/login" />;
+};
+
+// Admin Route Wrapper — chỉ cho admin
+const AdminRoute = ({ children }) => {
+  const { user, token, loading } = useAuth();
+  if (loading) return <div className="text-center mt-5">Đang tải...</div>;
+  if (!token) return <Navigate to="/login" />;
+  if (user?.role !== 'admin') return <Navigate to="/" />;
+  return children;
+};
+
+// Staff Route Wrapper — cho admin + staff
+const StaffRoute = ({ children }) => {
+  const { user, token, loading } = useAuth();
+  if (loading) return <div className="text-center mt-5">Đang tải...</div>;
+  if (!token) return <Navigate to="/login" />;
+  if (user?.role !== 'admin' && user?.role !== 'staff') return <Navigate to="/" />;
+  return children;
 };
 
 const UserProfile = () => {
@@ -53,18 +79,41 @@ const AppLayout = ({ children }) => {
 const AppRoutes = () => {
   return (
     <Router>
-      <AppLayout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={
+      <Routes>
+        {/* === Customer Pages (có Header + Footer) === */}
+        <Route path="/" element={<AppLayout><Home /></AppLayout>} />
+        <Route path="/login" element={<AppLayout><Login /></AppLayout>} />
+        <Route path="/register" element={<AppLayout><Register /></AppLayout>} />
+        <Route path="/profile" element={
+          <AppLayout>
             <PrivateRoute>
               <UserProfile />
             </PrivateRoute>
-          } />
-        </Routes>
-      </AppLayout>
+          </AppLayout>
+        } />
+
+        {/* === Admin Pages — TV5 (dùng AdminLayout riêng, không Header/Footer) === */}
+        <Route path="/admin/dashboard" element={
+          <AdminRoute><AdminDashboard /></AdminRoute>
+        } />
+        <Route path="/admin/users" element={
+          <AdminRoute><AdminUsers /></AdminRoute>
+        } />
+        <Route path="/admin/inventory" element={
+          <AdminRoute><AdminInventory /></AdminRoute>
+        } />
+        <Route path="/admin/logs" element={
+          <AdminRoute><AdminLogs /></AdminRoute>
+        } />
+
+        {/* === Staff Pages — TV5 (dùng AdminLayout riêng) === */}
+        <Route path="/staff/dashboard" element={
+          <StaffRoute><StaffDashboard /></StaffRoute>
+        } />
+        <Route path="/staff/orders" element={
+          <StaffRoute><StaffOrders /></StaffRoute>
+        } />
+      </Routes>
     </Router>
   );
 };

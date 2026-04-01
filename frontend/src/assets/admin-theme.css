@@ -1,0 +1,178 @@
+/* Custom Theme cho hệ thống quản trị AuraBeauty */
+:root {
+  /* Bảng màu tối cho Sidebar */
+  --admin-sidebar-bg: #0f172a; /* Slate 900 */
+  --admin-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --admin-sidebar-active: #3b82f6; /* Blue 500 */
+  --admin-sidebar-text: #cbd5e1; /* Slate 300 */
+  
+  /* Bảng màu nền chính */
+  --admin-bg: #f8fafc; /* Nền xám rất nhạt, sang trọng */
+  
+  /* Bảng màu Card */
+  --admin-card-bg: #ffffff;
+  --admin-card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+  --admin-card-hover-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.1);
+  --admin-border-radius: 16px;
+  
+  /* Gradient màu nền icon */
+  --admin-gradient-primary: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --admin-gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --admin-gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --admin-gradient-danger:  linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  --admin-gradient-info:    linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+/* Base Body cho Admin Layout */
+.admin-wrapper {
+  background-color: var(--admin-bg);
+  font-family: 'Inter', sans-serif;
+  color: #334155;
+}
+
+/* === BỘ KHUNG (LAYOUT) === */
+.admin-sidebar {
+  background-color: var(--admin-sidebar-bg);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.06);
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.admin-sidebar .nav-link {
+  color: var(--admin-sidebar-text);
+  font-weight: 500;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.admin-sidebar .nav-link:hover {
+  background-color: var(--admin-sidebar-hover);
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
+.admin-sidebar .nav-link.active {
+  background: var(--admin-gradient-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.admin-topbar {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  z-index: 999;
+}
+
+/* === THẺ CARD QUẢN TRỊ (ADMIN CARDS) === */
+.admin-card {
+  background-color: var(--admin-card-bg);
+  border-radius: var(--admin-border-radius);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  box-shadow: var(--admin-card-shadow);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.admin-card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--admin-card-hover-shadow);
+}
+
+.admin-card-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1.25rem 1.5rem;
+  background-color: transparent;
+}
+
+/* Biểu tượng trong Stats Card */
+.stats-icon-box {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  color: white;
+}
+
+.stats-icon-primary { background: var(--admin-gradient-primary); box-shadow: 0 8px 16px rgba(59, 130, 246, 0.25); }
+.stats-icon-success { background: var(--admin-gradient-success); box-shadow: 0 8px 16px rgba(16, 185, 129, 0.25); }
+.stats-icon-warning { background: var(--admin-gradient-warning); box-shadow: 0 8px 16px rgba(245, 158, 11, 0.25); }
+.stats-icon-danger { background: var(--admin-gradient-danger); box-shadow: 0 8px 16px rgba(239, 68, 68, 0.25); }
+.stats-icon-info { background: var(--admin-gradient-info); box-shadow: 0 8px 16px rgba(14, 165, 233, 0.25); }
+
+/* === BẢNG DỮ LIỆU (DATA TABLES) === */
+.admin-table-wrapper {
+  background: white;
+  border-radius: var(--admin-border-radius);
+  overflow: hidden;
+}
+
+.admin-table {
+  width: 100%;
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-table th {
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  border-top: none;
+}
+
+.admin-table td {
+  padding: 16px 20px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  transition: background-color 0.2s;
+}
+
+.admin-table tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* Xóa viền dọc, bo tròn góc đầu/cuối của Table Header */
+.admin-table thead tr th:first-child { border-top-left-radius: var(--admin-border-radius); }
+.admin-table thead tr th:last-child { border-top-right-radius: var(--admin-border-radius); }
+
+/* === HUY HIỆU (BADGES) TRONG ADMIN === */
+.admin-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.admin-badge-success { background-color: #dcfce7; color: #166534; }
+.admin-badge-warning { background-color: #fef9c3; color: #854d0e; }
+.admin-badge-danger { background-color: #fee2e2; color: #991b1b; }
+.admin-badge-info { background-color: #e0f2fe; color: #075985; }
+.admin-badge-primary { background-color: #dbeafe; color: #1e40af; }
+.admin-badge-secondary { background-color: #f1f5f9; color: #475569; }
+
+/* Scrollbar tinh tế cho bảng */
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
