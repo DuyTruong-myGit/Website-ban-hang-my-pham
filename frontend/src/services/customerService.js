@@ -38,16 +38,23 @@ export const categoryApi = {
     return res.data;
   },
   // Lấy chi tiết danh mục bằng slug
-    getBySlug: async (slug) => {
-        const res = await apiClient.get(`/categories/${slug}`);
-        return res.data;
-    },
+  getBySlug: async (slug) => {
+    const res = await apiClient.get(`/categories/${slug}`);
+    return res.data;
+  },
 };
 
 // === BANNERS ===
 export const bannerApi = {
   getByPosition: async (position) => {
     const res = await apiClient.get(`/banners?position=${position}`);
+    return res.data;
+  },
+};
+// === BRANDS ===
+export const brandApi = {
+  getAll: async () => {
+    const res = await apiClient.get("/brands");
     return res.data;
   },
 };

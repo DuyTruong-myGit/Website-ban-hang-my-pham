@@ -6,11 +6,16 @@ import {
   Breadcrumb,
   Button,
   Badge,
+  Tabs,
+  Tab,
+  Form,
+  InputGroup,
 } from "react-bootstrap";
 import { useParams, Link } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import VariantSelector from "../components/common/VariantSelector";
-import { productApi } from "../services/customerService";
+import ProductGrid from "../components/common/ProductGrid";
+import { productApi, brandApi } from "../services/customerService";
 
 const ProductDetail = () => {
   const { slug } = useParams();
@@ -19,6 +24,11 @@ const ProductDetail = () => {
 
   const [mainImage, setMainImage] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [brandName, setBrandName] = useState("Đang cập nhật");
+
+  //  State cho Số lượng và Sản phẩm liên quan
+  const [quantity, setQuantity] = useState(1);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -36,6 +46,32 @@ const ProductDetail = () => {
           if (prodData.variants && prodData.variants.length > 0) {
             setSelectedVariant(prodData.variants[0]);
           }
+
+          // Lấy Tên thương hiệu
+          if (prodData.brandId) {
+            const brandRes = await brandApi.getAll();
+            if (brandRes?.success) {
+              const brandInfo = brandRes.data.find(
+                (b) => (b.id || b._id) === prodData.brandId,
+              );
+              if (brandInfo) setBrandName(brandInfo.name);
+            }
+          }
+
+          //  Lấy Sản phẩm liên quan (cùng danh mục)
+          if (prodData.categoryId) {
+            const relatedRes = await productApi.getProducts({
+              categoryId: prodData.categoryId,
+              limit: 6,
+            });
+            if (relatedRes?.success) {
+              // Lọc bỏ chính sản phẩm hiện tại ra khỏi danh sách
+              const filtered = relatedRes.data.filter(
+                (p) => (p.id || p._id) !== (prodData.id || prodData._id),
+              );
+              setRelatedProducts(filtered.slice(0, 5));
+            }
+          }
         }
       } catch (error) {
         console.error("Lỗi lấy chi tiết sản phẩm:", error);
@@ -45,6 +81,11 @@ const ProductDetail = () => {
     };
 
     fetchProductDetail();
+  }, [slug]);
+
+  // Reset số lượng về 1 mỗi khi đổi sản phẩm khác
+  useEffect(() => {
+    setQuantity(1);
   }, [slug]);
 
   if (loading) return <Loading message="Đang tải thông tin sản phẩm..." />;
@@ -70,6 +111,9 @@ const ProductDetail = () => {
     }).format(price || 0);
   };
 
+  const handleDecrease = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
+  const handleIncrease = () => setQuantity((prev) => prev + 1);
+
   return (
     <main className="bg-hasaki-bg-gray pb-5 pt-3">
       <Container>
@@ -80,14 +124,19 @@ const ProductDetail = () => {
           <Breadcrumb.Item active>{product.name}</Breadcrumb.Item>
         </Breadcrumb>
 
+        {/* --- KHỐI THÔNG TIN CHÍNH --- */}
         <div className="bg-white p-4 rounded shadow-sm mb-4">
           <Row>
+            {/* Ảnh sản phẩm */}
             <Col md={5}>
-              <div className="border rounded mb-3 p-2 text-center position-relative">
+              <div
+                className="border rounded mb-3 p-2 text-center position-relative overflow-hidden"
+                style={{ cursor: "zoom-in" }}
+              >
                 {displaySalePrice && (
                   <Badge
                     bg="danger"
-                    className="position-absolute top-0 start-0 m-2 px-2 py-1 fs-6"
+                    className="position-absolute top-0 start-0 m-2 px-2 py-1 fs-6 z-1"
                   >
                     -
                     {Math.round(
@@ -105,7 +154,17 @@ const ProductDetail = () => {
                   }
                   alt={product.name}
                   className="img-fluid"
-                  style={{ maxHeight: "400px", objectFit: "contain" }}
+                  style={{
+                    maxHeight: "400px",
+                    objectFit: "contain",
+                    transition: "transform 0.3s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.transform = "scale(1.1)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.transform = "scale(1)")
+                  }
                 />
               </div>
               <div className="d-flex gap-2 overflow-auto pb-2">
@@ -126,20 +185,39 @@ const ProductDetail = () => {
               </div>
             </Col>
 
+            {/* Thông tin chi tiết */}
             <Col md={7}>
               <h4 className="fw-bold lh-base">{product.name}</h4>
-              <div className="d-flex align-items-center gap-3 mb-3 text-muted small">
-                <span>
-                  Mã SP:{" "}
+
+              <div className="d-flex align-items-center flex-wrap gap-3 mb-3 text-muted small">
+                <span className="text-warning">
+                  <i className="bi bi-star-fill"></i>
+                  <i className="bi bi-star-fill"></i>
+                  <i className="bi bi-star-fill"></i>
+                  <i className="bi bi-star-fill"></i>
+                  <i className="bi bi-star-half"></i>
+                  <span className="ms-1 text-dark fw-medium">
+                    {product.avgRating || 0}
+                  </span>
+                  <span className="ms-1">
+                    ({product.reviewCount || 0} đánh giá)
+                  </span>
+                </span>
+                <span className="border-start ps-3">
+                  Đã bán:{" "}
                   <strong className="text-dark">
-                    {product.sku || "Đang cập nhật"}
+                    {product.soldCount || 0}
                   </strong>
                 </span>
-                <span>
-                  Thương hiệu:{" "}
-                  <strong className="text-hasaki">
-                    {product.brandId || "Đang cập nhật"}
+                <span className="border-start ps-3">
+                  Mã SP:{" "}
+                  <strong className="text-dark">
+                    {selectedVariant?.sku || product.sku || "Đang cập nhật"}
                   </strong>
+                </span>
+                <span className="border-start ps-3">
+                  Thương hiệu:{" "}
+                  <strong className="text-hasaki">{brandName}</strong>
                 </span>
               </div>
 
@@ -156,7 +234,6 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* COMPONENT ĐƯỢC TÁI SỬ DỤNG Ở ĐÂY */}
               <VariantSelector
                 variants={product.variants}
                 selectedVariant={selectedVariant}
@@ -166,11 +243,48 @@ const ProductDetail = () => {
                 }}
               />
 
-              <div className="d-flex gap-3 mt-4">
+              {/*  Trạng thái Tồn kho & Bộ chọn số lượng */}
+              <div className="d-flex align-items-center gap-4 mb-4">
+                <div>
+                  <h6 className="fw-bold mb-2">Tình trạng:</h6>
+                  <span
+                    className={`badge ${product.inStock ? "bg-success" : "bg-danger"} fs-6 py-2 px-3`}
+                  >
+                    {product.inStock ? "Còn hàng" : "Hết hàng"}
+                  </span>
+                </div>
+                <div>
+                  <h6 className="fw-bold mb-2">Số lượng:</h6>
+                  <InputGroup style={{ width: "130px" }}>
+                    <Button
+                      variant="outline-secondary"
+                      onClick={handleDecrease}
+                      disabled={!product.inStock}
+                    >
+                      -
+                    </Button>
+                    <Form.Control
+                      className="text-center fw-bold"
+                      value={quantity}
+                      readOnly
+                    />
+                    <Button
+                      variant="outline-secondary"
+                      onClick={handleIncrease}
+                      disabled={!product.inStock}
+                    >
+                      +
+                    </Button>
+                  </InputGroup>
+                </div>
+              </div>
+
+              <div className="d-flex gap-3 mt-2">
                 <Button
                   variant="outline-success"
                   size="lg"
                   className="w-50 border-2 fw-bold text-hasaki bg-white"
+                  disabled={!product.inStock}
                 >
                   <i className="bi bi-cart-plus me-2"></i>THÊM VÀO GIỎ
                 </Button>
@@ -178,6 +292,7 @@ const ProductDetail = () => {
                   variant="success"
                   size="lg"
                   className="w-50 fw-bold bg-hasaki border-0"
+                  disabled={!product.inStock}
                 >
                   MUA NGAY
                 </Button>
@@ -186,7 +301,7 @@ const ProductDetail = () => {
               {product.shortDescription && (
                 <div className="mt-4 pt-4 border-top">
                   <h6 className="fw-bold">Tóm tắt sản phẩm:</h6>
-                  <p className="text-muted small lh-lg">
+                  <p className="text-muted small lh-lg mb-0">
                     {product.shortDescription}
                   </p>
                 </div>
@@ -195,19 +310,73 @@ const ProductDetail = () => {
           </Row>
         </div>
 
-        <div className="bg-white p-4 rounded shadow-sm">
-          <h5 className="fw-bold mb-4 border-bottom pb-2">
-            THÔNG TIN SẢN PHẨM
-          </h5>
-          {product.description ? (
-            <div
-              className="text-muted lh-lg"
-              dangerouslySetInnerHTML={{ __html: product.description }}
-            />
-          ) : (
-            <p className="text-muted">Đang cập nhật mô tả chi tiết...</p>
-          )}
+        {/* ---  CẤU TRÚC TABS CHO MÔ TẢ & THUỘC TÍNH --- */}
+        <div className="bg-white p-4 rounded shadow-sm mb-4">
+          <Tabs defaultActiveKey="description" className="mb-4 custom-tabs">
+            <Tab
+              eventKey="description"
+              title={<span className="fw-bold fs-6">Mô tả sản phẩm</span>}
+            >
+              {product.description ? (
+                <div
+                  className="text-muted lh-lg mt-3"
+                  style={{ whiteSpace: "pre-wrap" }}
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+              ) : (
+                <p className="text-muted mt-3">
+                  Đang cập nhật mô tả chi tiết...
+                </p>
+              )}
+            </Tab>
+
+            <Tab
+              eventKey="attributes"
+              title={
+                <span className="fw-bold fs-6">Thành phần & Cách dùng</span>
+              }
+            >
+              <div className="mt-3">
+                {product.attributes && product.attributes.length > 0 ? (
+                  <table className="table table-bordered table-striped">
+                    <tbody>
+                      {product.attributes.map((attr, idx) => (
+                        <tr key={idx}>
+                          <th
+                            className="bg-light text-nowrap"
+                            style={{ width: "20%", verticalAlign: "middle" }}
+                          >
+                            {attr.key}
+                          </th>
+                          <td
+                            style={{
+                              verticalAlign: "middle",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {attr.value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-muted">Chưa có thông tin chi tiết.</p>
+                )}
+              </div>
+            </Tab>
+          </Tabs>
         </div>
+
+        {/* ---  SẢN PHẨM LIÊN QUAN --- */}
+        {relatedProducts.length > 0 && (
+          <div className="bg-white p-4 rounded shadow-sm mb-4">
+            <h5 className="fw-bold mb-4 text-uppercase border-bottom pb-2">
+              Sản phẩm cùng danh mục
+            </h5>
+            <ProductGrid products={relatedProducts} />
+          </div>
+        )}
       </Container>
     </main>
   );
