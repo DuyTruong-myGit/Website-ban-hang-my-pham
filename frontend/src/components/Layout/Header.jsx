@@ -2,9 +2,11 @@ import React from 'react';
 import { Container, Row, Col, Form, InputGroup, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 const Header = () => {
     const { user, logout } = useAuth();
+    const { totalItems } = useCart();
     const navigate = useNavigate();
 
     return (
@@ -51,25 +53,50 @@ const Header = () => {
                                     <span style={{fontSize: '11px'}}>Hỗ trợ</span>
                                 </div>
                                 
+                                {/* Icon Admin/Staff Panel theo role */}
+                                {user && (user.role === 'admin' || user.role === 'staff') && (
+                                    <div
+                                        className="d-flex flex-column align-items-center cursor-pointer position-relative"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => navigate(user.role === 'admin' ? '/admin/dashboard' : '/staff/dashboard')}
+                                    >
+                                        <i className="bi bi-speedometer2 fs-4"></i>
+                                        <span style={{ fontSize: '11px' }}>
+                                            {user.role === 'admin' ? 'Admin' : 'Staff'}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Icon tài khoản */}
                                 {user ? (
-                                    <div className="d-flex flex-column align-items-center cursor-pointer" onClick={() => navigate('/profile')}>
+                                    <div
+                                        className="d-flex flex-column align-items-center cursor-pointer"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => navigate('/profile')}
+                                    >
                                         <i className="bi bi-person fs-4"></i>
-                                        <span style={{fontSize: '11px'}}>Chào, {user.name.split(' ').pop()}</span>
+                                        <span style={{ fontSize: '11px' }}>Chào, {user.name.split(' ').pop()}</span>
                                     </div>
                                 ) : (
                                     <Link to="/login" className="text-white text-decoration-none d-flex flex-column align-items-center">
                                         <i className="bi bi-person fs-4"></i>
-                                        <span style={{fontSize: '11px'}}>Tài khoản</span>
+                                        <span style={{ fontSize: '11px' }}>Tài khoản</span>
                                     </Link>
                                 )}
 
-                                <div className="d-flex flex-column align-items-center cursor-pointer position-relative">
+                                {/* Icon giỏ hàng — hiển thị số lượng từ CartContext */}
+                                <Link to="/cart" className="text-white text-decoration-none d-flex flex-column align-items-center cursor-pointer position-relative">
                                     <i className="bi bi-cart3 fs-4"></i>
-                                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-hasaki-secondary" style={{fontSize: '9px', marginTop: '5px'}}>
-                                        0
-                                    </span>
-                                    <span style={{fontSize: '11px'}}>Giỏ hàng</span>
-                                </div>
+                                    {totalItems > 0 && (
+                                        <span
+                                            className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-hasaki-secondary"
+                                            style={{ fontSize: '9px', marginTop: '5px' }}
+                                        >
+                                            {totalItems > 99 ? '99+' : totalItems}
+                                        </span>
+                                    )}
+                                    <span style={{ fontSize: '11px' }}>Giỏ hàng</span>
+                                </Link>
                             </div>
                         </Col>
                     </Row>

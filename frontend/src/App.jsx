@@ -5,8 +5,12 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import './index.css';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
+
+// Pages — TV3
+import Cart from './pages/Cart';
 
 // Pages — TV1
 import Home from './pages/Home';
@@ -92,6 +96,9 @@ const AppRoutes = () => {
           </AppLayout>
         } />
 
+        {/* === TV3: Cart & Order === */}
+        <Route path="/cart" element={<AppLayout><Cart /></AppLayout>} />
+
         {/* === Admin Pages — TV5 (dùng AdminLayout riêng, không Header/Footer) === */}
         <Route path="/admin/dashboard" element={
           <AdminRoute><AdminDashboard /></AdminRoute>
@@ -121,7 +128,9 @@ const AppRoutes = () => {
 function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <CartProvider>
+        <AppRoutes />
+      </CartProvider>
     </AuthProvider>
   );
 }

@@ -17,7 +17,15 @@ const Login = () => {
         setLoading(true);
         const result = await login(email, password);
         if (result.success) {
-            navigate('/');
+            // Redirect theo role sau khi đăng nhập
+            const role = result.user?.role;
+            if (role === 'admin') {
+                navigate('/admin/dashboard');
+            } else if (role === 'staff') {
+                navigate('/staff/dashboard');
+            } else {
+                navigate('/');
+            }
         } else {
             setError(result.message);
         }

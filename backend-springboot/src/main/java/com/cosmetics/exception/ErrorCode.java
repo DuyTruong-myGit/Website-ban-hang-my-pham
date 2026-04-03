@@ -16,7 +16,15 @@ public enum ErrorCode {
     // Request Errors
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "Yêu cầu không hợp lệ."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Dữ liệu không hợp lệ."),
-    
+
+    // Product Errors
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Sản phẩm không tồn tại."),
+    PRODUCT_INACTIVE(HttpStatus.BAD_REQUEST, "Sản phẩm hiện không còn kinh doanh."),
+
+    // Cart Errors — TV3
+    CART_NOT_FOUND(HttpStatus.NOT_FOUND, "Giỏ hàng không tồn tại."),
+    CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "Sản phẩm không có trong giỏ hàng."),
+
     // Server Errors
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.");
 
