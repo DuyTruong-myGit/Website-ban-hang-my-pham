@@ -1,103 +1,139 @@
-import React from 'react';
-import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
-import heroBanner from '../assets/hero-banner.png';
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Carousel } from "react-bootstrap";
+import { Link } from "react-router-dom";
+import ProductGrid from "../components/common/ProductGrid";
+import Loading from "../components/common/Loading";
+import {
+  productApi,
+  categoryApi,
+  bannerApi,
+} from "../services/customerService";
 
 const Home = () => {
-    const categories = [
-        { name: 'Tẩy Trang', img: 'https://hasaki.vn/images/graphics/cate-1.jpg' },
-        { name: 'Sữa Rửa Mặt', img: 'https://hasaki.vn/images/graphics/cate-2.jpg' },
-        { name: 'Kem Chống Nắng', img: 'https://hasaki.vn/images/graphics/cate-3.jpg' },
-        { name: 'Serum', img: 'https://hasaki.vn/images/graphics/cate-4.jpg' },
-        { name: 'Son Môi', img: 'https://hasaki.vn/images/graphics/cate-5.jpg' },
-        { name: 'Mặt Nạ', img: 'https://hasaki.vn/images/graphics/cate-6.jpg' },
-    ];
+  const [bestSellers, setBestSellers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [heroBanners, setHeroBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    const products = [
-        { id: 1, name: 'Sữa Rửa Mặt CeraVe Foaming Facial Cleanser', price: '350.000đ', oldPrice: '420.000đ', discount: '17%', img: 'https://media.hasaki.vn/catalog/product/g/o/google-shopping-sua-rua-mat-cerave-giup-lam-sach-sau-cho-da-dau-473ml-1_1.jpg' },
-        { id: 2, name: 'Nước Tẩy Trang La Roche-Posay Micellar Water', price: '455.000đ', oldPrice: '525.000đ', discount: '13%', img: 'https://media.hasaki.vn/catalog/product/t/o/top-nuoc-tay-trang-la-roche-posay-danh-cho-da-dau-nhay-cam-400ml_1.jpg' },
-        { id: 3, name: 'Kem Chống Nắng Anessa Perfect UV Skincare', price: '585.000đ', oldPrice: '685.000đ', discount: '15%', img: 'https://media.hasaki.vn/catalog/product/p/r/promo-sua-chong-nang-anessa-bao-ve-hoan-hao-60ml-1649231641_1.jpg' },
-        { id: 4, name: 'Serum Klairs Rich Moist Soothing', price: '295.000đ', oldPrice: '380.000đ', discount: '22%', img: 'https://media.hasaki.vn/catalog/product/s/e/serum-klairs-duong-am-sau-cho-da-80ml_1.jpg' },
-    ];
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        setLoading(true);
+        const [productRes, categoryRes, bannerRes] = await Promise.all([
+          productApi.getBestSellers(),
+          categoryApi.getTree(),
+          bannerApi.getByPosition("hero"),
+        ]);
 
-    return (
-        <main className="pb-5">
-            {/* Hero Slider Area */}
-            <Container>
-                <div className="hero-banner shadow-sm">
-                    <img src={heroBanner} alt="Hero Banner" className="w-100 img-fluid" style={{ maxHeight: '400px', objectFit: 'cover' }} />
-                </div>
-            </Container>
+        if (productRes?.success) setBestSellers(productRes.data);
+        if (categoryRes?.success) setCategories(categoryRes.data.slice(0, 6));
+        if (bannerRes?.success) setHeroBanners(bannerRes.data);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu trang chủ:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-            {/* Categories Section */}
-            <Container className="mt-5">
-                <h4 className="fw-bold mb-4">DANH MỤC NỔI BẬT</h4>
-                <div className="d-flex justify-content-between overflow-auto pb-2 gap-3">
-                    {categories.map((cat, idx) => (
-                        <div key={idx} className="category-item text-center cursor-pointer flex-shrink-0" style={{ width: '120px' }}>
-                            <div className="bg-light border rounded-circle d-flex align-items-center justify-content-center mx-auto" style={{ width: '80px', height: '80px' }}>
-                                <span className="small text-muted text-center px-1" style={{ fontSize: '10px' }}>{cat.name}</span>
-                            </div>
-                            <p className="small fw-medium mt-2">{cat.name}</p>
-                        </div>
-                    ))}
-                </div>
-            </Container>
+    fetchHomeData();
+  }, []);
 
-            {/* Flash Sale Section */}
-            <Container className="mt-5 bg-white p-4 rounded shadow-sm">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                    <div className="d-flex align-items-center gap-3">
-                        <h4 className="fw-bold text-danger mb-0">FLASH DEALS</h4>
-                        <Badge bg="dark" className="p-2">02 : 15 : 45</Badge>
-                    </div>
-                    <Link to="/" className="text-hasaki text-decoration-none small">Xem tất cả &gt;</Link>
-                </div>
-                <Row>
-                    {products.map(prod => (
-                        <Col key={prod.id} xs={6} md={3} className="mb-4">
-                            <Card className="product-card h-100 p-2">
-                                <div className="position-relative text-center">
-                                    <div className="bg-light d-flex align-items-center justify-content-center" style={{ height: '180px' }}>
-                                        <span className="small text-muted px-2">Ảnh sản phẩm</span>
-                                    </div>
-                                    <span className="discount-badge position-absolute top-0 start-0">-{prod.discount}</span>
-                                </div>
-                                <Card.Body className="d-flex flex-column px-1">
-                                    <Card.Title className="fs-6 mb-2 text-truncate-2" style={{ height: '40px', overflow: 'hidden' }}>
-                                        {prod.name}
-                                    </Card.Title>
-                                    <div className="mt-auto">
-                                        <div className="text-danger fw-bold fs-5">{prod.price}</div>
-                                        <div className="text-muted text-decoration-line-through small">{prod.oldPrice}</div>
-                                        <Button variant="outline-success" size="sm" className="w-100 mt-3 border-hasaki text-hasaki">
-                                            Chọn mua
-                                        </Button>
-                                    </div>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    ))}
-                </Row>
-            </Container>
+  if (loading) {
+    return <Loading message="Đang tải dữ liệu trang chủ..." />;
+  }
 
-            {/* Banner Quảng Cáo Phụ */}
-            <Container className="mt-5">
-                <Row className="g-3">
-                    <Col md={6}>
-                        <div className="bg-light border rounded d-flex align-items-center justify-content-center shadow-sm" style={{ height: '150px' }}>
-                            <span className="text-muted">Quảng cáo 1</span>
-                        </div>
-                    </Col>
-                    <Col md={6}>
-                        <div className="bg-light border rounded d-flex align-items-center justify-content-center shadow-sm" style={{ height: '150px' }}>
-                            <span className="text-muted">Quảng cáo 2</span>
-                        </div>
-                    </Col>
-                </Row>
-            </Container>
-        </main>
-    );
+  return (
+    <main className="bg-hasaki-bg-gray pb-5">
+      {/* Hero Banner Section */}
+      <Container className="mt-3">
+        {heroBanners.length > 0 ? (
+          <Carousel interval={3000} pause="hover" indicators={true}>
+            {heroBanners.map((banner) => (
+              <Carousel.Item key={banner.id || banner._id}>
+                {banner.linkUrl ? (
+                  <Link to={banner.linkUrl}>
+                    <img
+                      className="d-block w-100 rounded hero-banner shadow-sm"
+                      src={banner.imageUrl}
+                      alt={banner.title || "Hero Banner"}
+                      style={{ maxHeight: "400px", objectFit: "cover" }}
+                    />
+                  </Link>
+                ) : (
+                  <img
+                    className="d-block w-100 rounded hero-banner shadow-sm"
+                    src={banner.imageUrl}
+                    alt={banner.title || "Hero Banner"}
+                    style={{ maxHeight: "400px", objectFit: "cover" }}
+                  />
+                )}
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        ) : (
+          <div
+            className="bg-white rounded d-flex align-items-center justify-content-center shadow-sm"
+            style={{ height: "350px" }}
+          >
+            <h4 className="text-muted">Chưa có Hero Banner</h4>
+          </div>
+        )}
+      </Container>
+
+      {/* Danh mục nổi bật */}
+      <Container className="mt-4">
+        <div className="bg-white p-3 rounded shadow-sm">
+          <h5 className="fw-bold mb-3 text-uppercase">Danh Mục Nổi Bật</h5>
+          <Row className="g-3">
+            {categories.map((cat) => (
+              <Col xs={4} md={2} key={cat.id || cat._id}>
+                <Link
+                  to={`/category/${cat.slug}`}
+                  className="text-decoration-none text-dark"
+                >
+                  <div className="text-center">
+                    <img
+                      src={cat.imageUrl || "https://via.placeholder.com/150"}
+                      alt={cat.name}
+                      className="img-fluid rounded-circle mb-2 border"
+                      style={{
+                        width: "80px",
+                        height: "80px",
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => {
+                        e.target.src =
+                          "https://via.placeholder.com/150?text=No+Image";
+                      }}
+                    />
+                    <div className="small fw-medium">{cat.name}</div>
+                  </div>
+                </Link>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      </Container>
+
+      {/* Sản Phẩm Bán Chạy */}
+      <Container className="mt-4">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h4 className="fw-bold text-uppercase mb-0 border-start border-4 border-success ps-2">
+            Sản Phẩm Bán Chạy
+          </h4>
+          <Link
+            to="/search?sort=best_seller"
+            className="text-decoration-none text-hasaki fw-medium"
+          >
+            Xem tất cả <i className="bi bi-chevron-right"></i>
+          </Link>
+        </div>
+
+        {/* COMPONENT ĐƯỢC TÁI SỬ DỤNG Ở ĐÂY */}
+        <ProductGrid products={bestSellers} />
+      </Container>
+    </main>
+  );
 };
 
 export default Home;

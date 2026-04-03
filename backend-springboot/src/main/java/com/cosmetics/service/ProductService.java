@@ -10,7 +10,9 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
-
+import java.util.ArrayList;
+import com.cosmetics.model.Category;
+import com.cosmetics.repository.CategoryRepository;
 import java.util.List;
 
 @Service
@@ -18,6 +20,8 @@ public class ProductService {
 
     @Autowired
     private ProductRepository productRepository;
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private MongoTemplate mongoTemplate; // Dùng để build câu query động cho bộ lọc
@@ -37,7 +41,19 @@ public class ProductService {
 
         // 1. Lọc theo danh mục
         if (categoryId != null && !categoryId.isEmpty()) {
-            query.addCriteria(Criteria.where("categoryId").is(categoryId));
+            List<String> listCategoryIds = new ArrayList<>();
+            listCategoryIds.add(categoryId); // Thêm ID của danh mục hiện tại (Cha)
+
+            // Tìm xem danh mục này có các danh mục con nào không
+            List<Category> childCategories = categoryRepository.findByParentId(categoryId);
+            if (childCategories != null && !childCategories.isEmpty()) {
+                for (Category child : childCategories) {
+                    listCategoryIds.add(child.getId()); // Góp thêm ID của các danh mục con vào danh sách
+                }
+            }
+
+            // Dùng toán tử .in() để lấy sản phẩm thuộc BẤT KỲ ID nào trong danh sách trên
+            query.addCriteria(Criteria.where("categoryId").in(listCategoryIds));
         }
 
         // 2. Lọc theo thương hiệu
@@ -94,11 +110,27 @@ public class ProductService {
 
     // Các danh sách hiển thị Trang chủ
     public List<Product> getFeaturedProducts() {
-        return productRepository.findByIsActiveTrueAndIsFeaturedTrue(PageRequest.of(0, 10)).getContent();
+        Query query = new Query();
+        query.addCriteria(Criteria.where("isActive").is(true));
+        query.addCriteria(Criteria.where("isFeatured").is(true));
+        
+        // Có thể sort theo thời gian mới nhất
+        query.with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        query.limit(12); // Lấy 12 sản phẩm
+        
+        return mongoTemplate.find(query, Product.class);
     }
 
     public List<Product> getBestSellers() {
-        return productRepository.findByIsActiveTrueAndIsBestSellerTrue(PageRequest.of(0, 10)).getContent();
+        Query query = new Query();
+        query.addCriteria(Criteria.where("isActive").is(true));
+        query.addCriteria(Criteria.where("isBestSeller").is(true));
+        
+        // Có thể sort theo thời gian mới nhất
+        query.with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        query.limit(12); // Lấy 12 sản phẩm
+        
+        return mongoTemplate.find(query, Product.class);
     }
 
     // CRUD cho Admin
@@ -110,9 +142,10 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BAD_REQUEST, "Không tìm thấy sản phẩm"));
         
-        // Cập nhật các trường (Trong thực tế nên dùng ModelMapper để map nhanh hơn)
+        // Cập nhật các trường cơ bản
         product.setName(productDetails.getName());
         product.setSlug(productDetails.getSlug());
+        product.setSku(productDetails.getSku()); // Đã bổ sung
         product.setImages(productDetails.getImages());
         product.setBasePrice(productDetails.getBasePrice());
         product.setSalePrice(productDetails.getSalePrice());
@@ -120,9 +153,16 @@ public class ProductService {
         product.setBrandId(productDetails.getBrandId());
         product.setVariants(productDetails.getVariants());
         product.setAttributes(productDetails.getAttributes());
+        
+        product.setShortDescription(productDetails.getShortDescription());
         product.setDescription(productDetails.getDescription());
+        
+        // Cập nhật các cờ trạng thái (Flags) quan trọng
         product.setIsActive(productDetails.getIsActive());
         product.setInStock(productDetails.getInStock());
+        product.setIsFeatured(productDetails.getIsFeatured());       
+        product.setIsBestSeller(productDetails.getIsBestSeller());   
+        product.setIsNew(productDetails.getIsNew());
         
         return productRepository.save(product);
     }

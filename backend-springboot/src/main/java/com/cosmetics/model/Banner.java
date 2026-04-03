@@ -38,4 +38,10 @@ public class Banner {
     @Field("is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    @Field("start_date")
+    private LocalDateTime startDate;
+
+    @Field("end_date")
+    private LocalDateTime endDate;
 }
