@@ -9,6 +9,7 @@ import java.util.Optional;
 @Repository
 public interface CategoryRepository extends MongoRepository<Category, String> {
     Optional<Category> findBySlug(String slug);
-    List<Category> findByParentId(String parentId);
     List<Category> findByIsActiveTrueOrderBySortOrderAsc();
+    // Tìm tất cả danh mục con dựa vào ID của danh mục cha
+    List<Category> findByParentId(String parentId);
 }

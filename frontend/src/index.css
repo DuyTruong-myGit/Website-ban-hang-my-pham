@@ -1,16 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
 :root {
-  --hasaki-primary: #326E51;
-  --hasaki-secondary: #FF6600;
-  --hasaki-bg-gray: #F2F1F6;
+  --hasaki-primary: #326e51;
+  --hasaki-secondary: #ff6600;
+  --hasaki-bg-gray: #f2f1f6;
   --hasaki-text-main: #333333;
   --hasaki-text-muted: #666666;
-  --hasaki-white: #FFFFFF;
+  --hasaki-white: #ffffff;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   margin: 0;
   padding: 0;
   background-color: var(--hasaki-bg-gray);
@@ -33,10 +33,18 @@ body {
 }
 
 /* Utility Classes */
-.bg-hasaki { background-color: var(--hasaki-primary) !important; }
-.text-hasaki { color: var(--hasaki-primary) !important; }
-.bg-hasaki-secondary { background-color: var(--hasaki-secondary) !important; }
-.text-hasaki-secondary { color: var(--hasaki-secondary) !important; }
+.bg-hasaki {
+  background-color: var(--hasaki-primary) !important;
+}
+.text-hasaki {
+  color: var(--hasaki-primary) !important;
+}
+.bg-hasaki-secondary {
+  background-color: var(--hasaki-secondary) !important;
+}
+.text-hasaki-secondary {
+  color: var(--hasaki-secondary) !important;
+}
 
 /* Header and Navigation */
 .main-header {
@@ -102,7 +110,7 @@ body {
 }
 
 .product-card:hover {
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .discount-badge {
@@ -111,4 +119,8 @@ body {
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: bold;
+}
+.hover-bg-light:hover {
+  background-color: #f8f9fa;
+  color: var(--hasaki-primary) !important;
 }

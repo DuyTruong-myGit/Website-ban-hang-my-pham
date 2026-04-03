@@ -1,103 +1,271 @@
-import React from 'react';
-import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
-import heroBanner from '../assets/hero-banner.png';
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Carousel } from "react-bootstrap";
+import { Link } from "react-router-dom";
+import ProductGrid from "../components/common/ProductGrid";
+import Loading from "../components/common/Loading";
+import {
+  productApi,
+  categoryApi,
+  bannerApi,
+  brandApi,
+} from "../services/customerService";
 
 const Home = () => {
-    const categories = [
-        { name: 'Tẩy Trang', img: 'https://hasaki.vn/images/graphics/cate-1.jpg' },
-        { name: 'Sữa Rửa Mặt', img: 'https://hasaki.vn/images/graphics/cate-2.jpg' },
-        { name: 'Kem Chống Nắng', img: 'https://hasaki.vn/images/graphics/cate-3.jpg' },
-        { name: 'Serum', img: 'https://hasaki.vn/images/graphics/cate-4.jpg' },
-        { name: 'Son Môi', img: 'https://hasaki.vn/images/graphics/cate-5.jpg' },
-        { name: 'Mặt Nạ', img: 'https://hasaki.vn/images/graphics/cate-6.jpg' },
-    ];
+  // States
+  const [heroBanners, setHeroBanners] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
 
-    const products = [
-        { id: 1, name: 'Sữa Rửa Mặt CeraVe Foaming Facial Cleanser', price: '350.000đ', oldPrice: '420.000đ', discount: '17%', img: 'https://media.hasaki.vn/catalog/product/g/o/google-shopping-sua-rua-mat-cerave-giup-lam-sach-sau-cho-da-dau-473ml-1_1.jpg' },
-        { id: 2, name: 'Nước Tẩy Trang La Roche-Posay Micellar Water', price: '455.000đ', oldPrice: '525.000đ', discount: '13%', img: 'https://media.hasaki.vn/catalog/product/t/o/top-nuoc-tay-trang-la-roche-posay-danh-cho-da-dau-nhay-cam-400ml_1.jpg' },
-        { id: 3, name: 'Kem Chống Nắng Anessa Perfect UV Skincare', price: '585.000đ', oldPrice: '685.000đ', discount: '15%', img: 'https://media.hasaki.vn/catalog/product/p/r/promo-sua-chong-nang-anessa-bao-ve-hoan-hao-60ml-1649231641_1.jpg' },
-        { id: 4, name: 'Serum Klairs Rich Moist Soothing', price: '295.000đ', oldPrice: '380.000đ', discount: '22%', img: 'https://media.hasaki.vn/catalog/product/s/e/serum-klairs-duong-am-sau-cho-da-80ml_1.jpg' },
-    ];
+  const [flashSales, setFlashSales] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
 
-    return (
-        <main className="pb-5">
-            {/* Hero Slider Area */}
-            <Container>
-                <div className="hero-banner shadow-sm">
-                    <img src={heroBanner} alt="Hero Banner" className="w-100 img-fluid" style={{ maxHeight: '400px', objectFit: 'cover' }} />
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        setLoading(true);
+        // Gọi 7 API song song để tối ưu tốc độ tải trang
+        const [
+          bannerRes,
+          catRes,
+          brandRes,
+          flashRes,
+          newRes,
+          bestRes,
+          featRes,
+        ] = await Promise.all([
+          bannerApi.getByPosition("hero"),
+          categoryApi.getTree(),
+          brandApi.getAll(),
+          productApi.getFlashSale(),
+          productApi.getNewArrivals(),
+          productApi.getBestSellers(),
+          productApi.getFeatured(),
+        ]);
+
+        if (bannerRes?.success) setHeroBanners(bannerRes.data);
+        if (catRes?.success) setCategories(catRes.data.slice(0, 6)); // Lấy 6 danh mục đầu
+        if (brandRes?.success) setBrands(brandRes.data);
+        if (flashRes?.success) setFlashSales(flashRes.data);
+        if (newRes?.success) setNewArrivals(newRes.data);
+        if (bestRes?.success) setBestSellers(bestRes.data);
+        if (featRes?.success) setFeaturedProducts(featRes.data);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu trang chủ:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
+  }, []);
+
+  if (loading) {
+    return <Loading message="Đang tải dữ liệu trang chủ..." />;
+  }
+
+  return (
+    <main className="bg-hasaki-bg-gray pb-5">
+      {/* 1. HERO BANNER */}
+      <Container className="mt-3">
+        {heroBanners.length > 0 ? (
+          <Carousel interval={3000} pause="hover" indicators={true}>
+            {heroBanners.map((banner) => (
+              <Carousel.Item key={banner.id || banner._id}>
+                {banner.linkUrl ? (
+                  <Link to={banner.linkUrl}>
+                    <img
+                      className="d-block w-100 rounded hero-banner shadow-sm"
+                      src={banner.imageUrl}
+                      alt={banner.title}
+                      style={{ maxHeight: "400px", objectFit: "cover" }}
+                    />
+                  </Link>
+                ) : (
+                  <img
+                    className="d-block w-100 rounded hero-banner shadow-sm"
+                    src={banner.imageUrl}
+                    alt={banner.title}
+                    style={{ maxHeight: "400px", objectFit: "cover" }}
+                  />
+                )}
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        ) : (
+          <div
+            className="bg-white rounded d-flex align-items-center justify-content-center shadow-sm"
+            style={{ height: "350px" }}
+          >
+            <h4 className="text-muted">Chưa có Hero Banner</h4>
+          </div>
+        )}
+      </Container>
+
+      {/* 2. DANH MỤC NỔI BẬT */}
+      <Container className="mt-4">
+        <div className="bg-white p-3 rounded shadow-sm">
+          <h5 className="fw-bold mb-3 text-uppercase">Danh Mục Nổi Bật</h5>
+          <Row className="g-3">
+            {categories.map((cat) => (
+              <Col xs={4} md={2} key={cat.id || cat._id}>
+                <Link
+                  to={`/category/${cat.slug}`}
+                  className="text-decoration-none text-dark category-item"
+                >
+                  <div className="text-center">
+                    <img
+                      src={cat.imageUrl || "https://via.placeholder.com/150"}
+                      alt={cat.name}
+                      className="img-fluid rounded-circle mb-2 border"
+                      onError={(e) => {
+                        e.target.src =
+                          "https://via.placeholder.com/150?text=No+Image";
+                      }}
+                    />
+                    <div className="small fw-medium">{cat.name}</div>
+                  </div>
+                </Link>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      </Container>
+
+      {/* 3. FLASH SALE (MỚI BỔ SUNG) */}
+      {flashSales.length > 0 && (
+        <Container className="mt-4">
+          <div
+            className="p-3 rounded shadow-sm"
+            style={{
+              background: "linear-gradient(to right, #ff4b2b, #ff416c)",
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="d-flex align-items-center gap-3">
+                <h4 className="fw-bold text-white mb-0 fst-italic">
+                  <i className="bi bi-lightning-charge-fill text-warning"></i>{" "}
+                  FLASH SALE
+                </h4>
+                {/* Giả lập đồng hồ đếm ngược */}
+                <div className="d-flex gap-1 text-white fw-bold">
+                  <span className="bg-dark px-2 py-1 rounded small">02</span>:
+                  <span className="bg-dark px-2 py-1 rounded small">45</span>:
+                  <span className="bg-dark px-2 py-1 rounded small">30</span>
                 </div>
-            </Container>
+              </div>
+              <Link
+                to="/search?sort=price_asc"
+                className="text-decoration-none text-white fw-medium"
+              >
+                Xem tất cả <i className="bi bi-chevron-right"></i>
+              </Link>
+            </div>
+            <ProductGrid products={flashSales} />
+          </div>
+        </Container>
+      )}
 
-            {/* Categories Section */}
-            <Container className="mt-5">
-                <h4 className="fw-bold mb-4">DANH MỤC NỔI BẬT</h4>
-                <div className="d-flex justify-content-between overflow-auto pb-2 gap-3">
-                    {categories.map((cat, idx) => (
-                        <div key={idx} className="category-item text-center cursor-pointer flex-shrink-0" style={{ width: '120px' }}>
-                            <div className="bg-light border rounded-circle d-flex align-items-center justify-content-center mx-auto" style={{ width: '80px', height: '80px' }}>
-                                <span className="small text-muted text-center px-1" style={{ fontSize: '10px' }}>{cat.name}</span>
-                            </div>
-                            <p className="small fw-medium mt-2">{cat.name}</p>
-                        </div>
-                    ))}
-                </div>
-            </Container>
+      {/* 4. THƯƠNG HIỆU NỔI BẬT (MỚI BỔ SUNG) */}
+      {brands.length > 0 && (
+        <Container className="mt-4">
+          <div className="bg-white p-3 rounded shadow-sm">
+            <h5 className="fw-bold mb-3 text-uppercase border-start border-4 border-info ps-2">
+              Thương Hiệu Nổi Bật
+            </h5>
+            <div
+              className="d-flex gap-3 overflow-auto pb-2 px-1"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {brands.map((brand) => (
+                <Link
+                  to={`/search?brand=${brand.slug}`}
+                  key={brand.id || brand._id}
+                  className="text-decoration-none border rounded p-2 text-center flex-shrink-0"
+                  style={{ width: "150px", transition: "all 0.3s" }}
+                  onMouseEnter={(e) => e.currentTarget.classList.add("shadow")}
+                  onMouseLeave={(e) =>
+                    e.currentTarget.classList.remove("shadow")
+                  }
+                >
+                  <img
+                    src={
+                      brand.logoUrl ||
+                      "https://via.placeholder.com/100x50?text=Brand"
+                    }
+                    alt={brand.name}
+                    style={{
+                      width: "100%",
+                      height: "60px",
+                      objectFit: "contain",
+                    }}
+                    onError={(e) => {
+                      e.target.src =
+                        "https://via.placeholder.com/100x50?text=Brand";
+                    }}
+                  />
+                  <div className="small fw-medium text-dark mt-2 text-truncate">
+                    {brand.name}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </Container>
+      )}
 
-            {/* Flash Sale Section */}
-            <Container className="mt-5 bg-white p-4 rounded shadow-sm">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                    <div className="d-flex align-items-center gap-3">
-                        <h4 className="fw-bold text-danger mb-0">FLASH DEALS</h4>
-                        <Badge bg="dark" className="p-2">02 : 15 : 45</Badge>
-                    </div>
-                    <Link to="/" className="text-hasaki text-decoration-none small">Xem tất cả &gt;</Link>
-                </div>
-                <Row>
-                    {products.map(prod => (
-                        <Col key={prod.id} xs={6} md={3} className="mb-4">
-                            <Card className="product-card h-100 p-2">
-                                <div className="position-relative text-center">
-                                    <div className="bg-light d-flex align-items-center justify-content-center" style={{ height: '180px' }}>
-                                        <span className="small text-muted px-2">Ảnh sản phẩm</span>
-                                    </div>
-                                    <span className="discount-badge position-absolute top-0 start-0">-{prod.discount}</span>
-                                </div>
-                                <Card.Body className="d-flex flex-column px-1">
-                                    <Card.Title className="fs-6 mb-2 text-truncate-2" style={{ height: '40px', overflow: 'hidden' }}>
-                                        {prod.name}
-                                    </Card.Title>
-                                    <div className="mt-auto">
-                                        <div className="text-danger fw-bold fs-5">{prod.price}</div>
-                                        <div className="text-muted text-decoration-line-through small">{prod.oldPrice}</div>
-                                        <Button variant="outline-success" size="sm" className="w-100 mt-3 border-hasaki text-hasaki">
-                                            Chọn mua
-                                        </Button>
-                                    </div>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    ))}
-                </Row>
-            </Container>
+      {/* 5. SẢN PHẨM MỚI VỀ (MỚI BỔ SUNG) */}
+      {newArrivals.length > 0 && (
+        <Container className="mt-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="fw-bold text-uppercase mb-0 border-start border-4 border-primary ps-2">
+              Sản Phẩm Mới
+            </h4>
+            <Link
+              to="/search?sort=newest"
+              className="text-decoration-none text-hasaki fw-medium"
+            >
+              Xem tất cả <i className="bi bi-chevron-right"></i>
+            </Link>
+          </div>
+          <ProductGrid products={newArrivals} />
+        </Container>
+      )}
 
-            {/* Banner Quảng Cáo Phụ */}
-            <Container className="mt-5">
-                <Row className="g-3">
-                    <Col md={6}>
-                        <div className="bg-light border rounded d-flex align-items-center justify-content-center shadow-sm" style={{ height: '150px' }}>
-                            <span className="text-muted">Quảng cáo 1</span>
-                        </div>
-                    </Col>
-                    <Col md={6}>
-                        <div className="bg-light border rounded d-flex align-items-center justify-content-center shadow-sm" style={{ height: '150px' }}>
-                            <span className="text-muted">Quảng cáo 2</span>
-                        </div>
-                    </Col>
-                </Row>
-            </Container>
-        </main>
-    );
+      {/* 6. SẢN PHẨM BÁN CHẠY */}
+      {bestSellers.length > 0 && (
+        <Container className="mt-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="fw-bold text-uppercase mb-0 border-start border-4 border-success ps-2">
+              Sản Phẩm Bán Chạy
+            </h4>
+            <Link
+              to="/search?sort=best_seller"
+              className="text-decoration-none text-hasaki fw-medium"
+            >
+              Xem tất cả <i className="bi bi-chevron-right"></i>
+            </Link>
+          </div>
+          <ProductGrid products={bestSellers} />
+        </Container>
+      )}
+
+      {/* 7. SẢN PHẨM NỔI BẬT (MỚI BỔ SUNG) */}
+      {featuredProducts.length > 0 && (
+        <Container className="mt-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="fw-bold text-uppercase mb-0 border-start border-4 border-warning ps-2">
+              Gợi Ý Cho Bạn
+            </h4>
+          </div>
+          <ProductGrid products={featuredProducts} />
+        </Container>
+      )}
+    </main>
+  );
 };
 
 export default Home;

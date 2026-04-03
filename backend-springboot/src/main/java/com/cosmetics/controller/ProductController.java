@@ -57,6 +57,15 @@ public class ProductController {
     public ApiResponse<List<Product>> getBestSellers() {
         return ApiResponse.success(productService.getBestSellers());
     }
+    @GetMapping("/new-arrivals")
+    public ApiResponse<List<Product>> getNewArrivals() {
+        return ApiResponse.success(productService.getNewArrivals());
+    }
+
+    @GetMapping("/flash-sale")
+    public ApiResponse<List<Product>> getFlashSale() {
+        return ApiResponse.success(productService.getFlashSale());
+    }
 
     // --- CÁC API DÀNH CHO ADMIN ---
     
