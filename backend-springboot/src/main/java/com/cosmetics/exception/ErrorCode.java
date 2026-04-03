@@ -24,6 +24,12 @@ public enum ErrorCode {
     // Cart Errors — TV3
     CART_NOT_FOUND(HttpStatus.NOT_FOUND, "Giỏ hàng không tồn tại."),
     CART_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "Sản phẩm không có trong giỏ hàng."),
+    CART_EMPTY(HttpStatus.BAD_REQUEST, "Giỏ hàng đang trống, không thể đặt hàng."),
+
+    // Order Errors — TV3
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "Đơn hàng không tồn tại."),
+    ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "Không thể hủy đơn hàng ở trạng thái hiện tại."),
+    ORDER_INVALID_STATUS(HttpStatus.BAD_REQUEST, "Trạng thái đơn hàng không hợp lệ."),
 
     // Server Errors
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.");

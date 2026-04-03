@@ -11,6 +11,10 @@ import Footer from './components/Layout/Footer';
 
 // Pages — TV3
 import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
+import AdminOrders from './pages/admin/AdminOrders';
 
 // Pages — TV1
 import Home from './pages/Home';
@@ -98,8 +102,14 @@ const AppRoutes = () => {
 
         {/* === TV3: Cart & Order === */}
         <Route path="/cart" element={<AppLayout><Cart /></AppLayout>} />
+        <Route path="/checkout" element={<AppLayout><Checkout /></AppLayout>} />
+        <Route path="/account/orders" element={<AppLayout><PrivateRoute><Orders /></PrivateRoute></AppLayout>} />
+        <Route path="/account/orders/:id" element={<AppLayout><PrivateRoute><OrderDetail /></PrivateRoute></AppLayout>} />
 
-        {/* === Admin Pages — TV5 (dùng AdminLayout riêng, không Header/Footer) === */}
+        <Route path="/admin/orders" element={
+          <AdminRoute><AdminOrders /></AdminRoute>
+        } />
+
         <Route path="/admin/dashboard" element={
           <AdminRoute><AdminDashboard /></AdminRoute>
         } />
