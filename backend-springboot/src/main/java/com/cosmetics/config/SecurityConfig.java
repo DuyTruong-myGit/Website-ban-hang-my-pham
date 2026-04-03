@@ -65,6 +65,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**", "/api/brands/**", "/api/reviews/product/**", "/api/banners/**", "/api/pages/**").permitAll()
+                // /api/cart/** yêu cầu JWT — TV3
+                // /api/orders/** yêu cầu JWT — TV3
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())

@@ -17,7 +17,15 @@ const Login = () => {
         setLoading(true);
         const result = await login(email, password);
         if (result.success) {
-            navigate('/');
+            // Redirect theo role sau khi đăng nhập
+            const role = result.user?.role;
+            if (role === 'admin') {
+                navigate('/admin/dashboard');
+            } else if (role === 'staff') {
+                navigate('/staff/dashboard');
+            } else {
+                navigate('/');
+            }
         } else {
             setError(result.message);
         }
@@ -35,9 +43,9 @@ const Login = () => {
                             <Form onSubmit={handleSubmit} className="text-start">
                                 <Form.Group className="mb-3" controlId="email">
                                     <Form.Label className="small fw-medium">Email / Số điện thoại</Form.Label>
-                                    <Form.Control 
-                                        type="email" 
-                                        placeholder="Nhập email của bạn" 
+                                    <Form.Control
+                                        type="email"
+                                        placeholder="Nhập email của bạn"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
@@ -50,9 +58,9 @@ const Login = () => {
                                         <Form.Label className="small fw-medium">Mật khẩu</Form.Label>
                                         <Link to="/" className="small text-hasaki text-decoration-none">Quên mật khẩu?</Link>
                                     </div>
-                                    <Form.Control 
-                                        type="password" 
-                                        placeholder="Nhập mật khẩu" 
+                                    <Form.Control
+                                        type="password"
+                                        placeholder="Nhập mật khẩu"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
@@ -60,9 +68,9 @@ const Login = () => {
                                     />
                                 </Form.Group>
 
-                                <Button 
-                                    variant="success" 
-                                    type="submit" 
+                                <Button
+                                    variant="success"
+                                    type="submit"
                                     className="w-100 py-2 bg-hasaki border-0 mb-3"
                                     disabled={loading}
                                 >

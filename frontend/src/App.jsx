@@ -13,6 +13,13 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header from "./components/Layout/Header";
 import Footer from "./components/Layout/Footer";
 
+// Pages — TV3
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
+import AdminOrders from './pages/admin/AdminOrders';
+
 // Pages — TV1
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -244,7 +251,9 @@ const AppRoutes = () => {
 function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <CartProvider>
+        <AppRoutes />
+      </CartProvider>
     </AuthProvider>
   );
 }
