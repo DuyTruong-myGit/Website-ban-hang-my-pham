@@ -170,4 +170,29 @@ public class ProductService {
     public void deleteProduct(String id) {
         productRepository.deleteById(id);
     }
+    // Lấy danh sách Sản phẩm Mới (New Arrivals)
+    public List<Product> getNewArrivals() {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("isActive").is(true));
+        query.addCriteria(Criteria.where("isNew").is(true)); // Tìm các SP có cờ isNew = true
+        
+        // Sắp xếp theo ngày tạo mới nhất
+        query.with(Sort.by(Sort.Direction.DESC, "createdAt"));
+        query.limit(12); // Lấy tối đa 12 sản phẩm cho đẹp giao diện
+        
+        return mongoTemplate.find(query, Product.class);
+    }
+
+    // Lấy danh sách Sản phẩm Flash Sale (Có giảm giá)
+    public List<Product> getFlashSale() {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("isActive").is(true));
+        query.addCriteria(Criteria.where("salePrice").gt(0)); // Tìm các SP có salePrice lớn hơn 0
+        
+        // Sắp xếp theo ngày cập nhật mới nhất để ưu tiên sale mới
+        query.with(Sort.by(Sort.Direction.DESC, "updatedAt"));
+        query.limit(12);
+        
+        return mongoTemplate.find(query, Product.class);
+    }
 }

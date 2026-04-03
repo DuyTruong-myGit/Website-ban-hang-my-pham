@@ -29,6 +29,16 @@ export const productApi = {
     const res = await apiClient.get("/products/featured");
     return res.data;
   },
+  // Lấy sản phẩm mới
+  getNewArrivals: async () => {
+    const res = await apiClient.get("/products/new-arrivals");
+    return res.data;
+  },
+  // Lấy sản phẩm Flash Sale
+  getFlashSale: async () => {
+    const res = await apiClient.get("/products/flash-sale");
+    return res.data;
+  },
 };
 
 // === CATEGORIES ===
