@@ -28,7 +28,7 @@ const AdminProducts = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState(null);
 
-  // ĐÃ CẬP NHẬT: Bổ sung tags, attributes và variants vào state mặc định
+  // Bổ sung tags, attributes và variants vào state mặc định
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -48,7 +48,17 @@ const AdminProducts = () => {
     isFeatured: false,
     isBestSeller: false,
   });
-
+  // Hàm đệ quy để kéo danh mục con ra ngang hàng với danh mục cha
+  const flattenCategories = (tree, prefix = "") => {
+    let result = [];
+    tree.forEach((cat) => {
+      result.push({ ...cat, displayName: prefix + cat.name });
+      if (cat.children && cat.children.length > 0) {
+        result = result.concat(flattenCategories(cat.children, prefix + "— "));
+      }
+    });
+    return result;
+  };
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -62,7 +72,7 @@ const AdminProducts = () => {
         setProducts(prodRes.data);
         if (prodRes.pagination) setTotalPages(prodRes.pagination.totalPages);
       }
-      if (catRes.success) setCategories(catRes.data);
+      if (catRes.success) setCategories(flattenCategories(catRes.data));
       if (brandRes.success) setBrands(brandRes.data);
     } catch (error) {
       alert("Lỗi tải dữ liệu: " + error.message);
@@ -440,7 +450,7 @@ const AdminProducts = () => {
                   <option value="">-- Chọn danh mục --</option>
                   {categories.map((cat) => (
                     <option key={cat.id || cat._id} value={cat.id || cat._id}>
-                      {cat.name}
+                      {cat.displayName}
                     </option>
                   ))}
                 </select>
