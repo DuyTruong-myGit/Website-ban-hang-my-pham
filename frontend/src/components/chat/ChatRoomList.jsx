@@ -6,14 +6,27 @@ const ChatRoomList = ({ rooms, activeRoomId, onSelectRoom, onAssignRoom }) => {
 
     const formatTime = (dateStr) => {
         if (!dateStr) return '';
-        const d = new Date(dateStr);
-        const now = new Date();
-        const diff = now - d;
+        try {
+            let d;
+            // Spring Boot LocalDateTime có thể trả array [2026, 4, 4, 14, 30, 0]
+            if (Array.isArray(dateStr)) {
+                const [year, month, day, hour = 0, minute = 0, second = 0] = dateStr;
+                d = new Date(year, month - 1, day, hour, minute, second);
+            } else {
+                d = new Date(dateStr);
+            }
+            if (isNaN(d.getTime())) return '';
 
-        if (diff < 60000) return 'Vừa xong';
-        if (diff < 3600000) return `${Math.floor(diff / 60000)} phút`;
-        if (diff < 86400000) return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            const now = new Date();
+            const diff = now - d;
+
+            if (diff < 60000) return 'Vừa xong';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)} phút`;
+            if (diff < 86400000) return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+        } catch {
+            return '';
+        }
     };
 
     const getStatusBadge = (status) => {

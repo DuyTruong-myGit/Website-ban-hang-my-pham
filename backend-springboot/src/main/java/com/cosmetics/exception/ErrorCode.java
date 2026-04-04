@@ -43,6 +43,21 @@ public enum ErrorCode {
     COUPON_MIN_ORDER(HttpStatus.BAD_REQUEST, "Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã giảm giá."),
     COUPON_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "Mã giảm giá đã tồn tại."),
 
+    // Review Errors — TV4
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "Đánh giá không tồn tại."),
+    REVIEW_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "Bạn đã đánh giá sản phẩm này rồi."),
+    REVIEW_NOT_PURCHASED(HttpStatus.BAD_REQUEST, "Bạn cần mua sản phẩm trước khi đánh giá."),
+
+    // Question Errors — TV4
+    QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Câu hỏi không tồn tại."),
+
+    // Wishlist Errors — TV4
+    WISHLIST_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "Sản phẩm đã có trong danh sách yêu thích."),
+    WISHLIST_NOT_FOUND(HttpStatus.NOT_FOUND, "Sản phẩm không có trong danh sách yêu thích."),
+
+    // Notification Errors — TV4
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "Thông báo không tồn tại."),
+
     // Server Errors
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.");
 

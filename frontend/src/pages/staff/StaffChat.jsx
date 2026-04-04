@@ -21,6 +21,8 @@ const StaffChat = () => {
         sendTyping,
         sendMarkAsRead,
         subscribeToNewRooms,
+        sendPresence,
+        stompClientRef,
     } = useChat();
 
     const [activeTab, setActiveTab] = useState('pending'); // pending, mine, closed
@@ -32,8 +34,15 @@ const StaffChat = () => {
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const newRoomSubRef = useRef(null);
+    const staffNotifSubRef = useRef(null);
+    const selectedRoomRef = useRef(null);
 
     const userId = user?.id || user?._id;
+
+    // Sync ref
+    useEffect(() => {
+        selectedRoomRef.current = selectedRoom;
+    }, [selectedRoom]);
 
     // ─── Load danh sách phòng chat ──────────────────────────────────────────
 
@@ -82,6 +91,57 @@ const StaffChat = () => {
         };
     }, [connected, subscribeToNewRooms]);
 
+    // ─── Subscribe notification channel cho staff: nhận unread updates ───────
+
+    useEffect(() => {
+        const client = stompClientRef?.current;
+        if (!client || !connected || !userId) return;
+
+        // Hủy subscription cũ
+        if (staffNotifSubRef.current) {
+            staffNotifSubRef.current.unsubscribe();
+            staffNotifSubRef.current = null;
+        }
+
+        // Subscribe vào channel notification cá nhân của staff
+        staffNotifSubRef.current = client.subscribe(
+            `/topic/user/${userId}/chat-notification`,
+            (frame) => {
+                const data = JSON.parse(frame.body);
+                const currentSelected = selectedRoomRef.current;
+
+                // Nếu tin nhắn thuộc phòng đang chọn → không tăng unread (vì đang xem)
+                if (currentSelected?.id === data.roomId) {
+                    // Đánh dấu đã đọc ngay
+                    sendMarkAsRead(data.roomId);
+                    return;
+                }
+
+                // Cập nhật unread count cho room trong sidebar
+                setRooms(prev => ({
+                    pending: prev.pending.map(r =>
+                        r.id === data.roomId
+                            ? { ...r, unreadStaff: (r.unreadStaff || 0) + 1, lastMessage: data.content }
+                            : r
+                    ),
+                    mine: prev.mine.map(r =>
+                        r.id === data.roomId
+                            ? { ...r, unreadStaff: (r.unreadStaff || 0) + 1, lastMessage: data.content }
+                            : r
+                    ),
+                    closed: prev.closed,
+                }));
+            }
+        );
+
+        return () => {
+            if (staffNotifSubRef.current) {
+                staffNotifSubRef.current.unsubscribe();
+                staffNotifSubRef.current = null;
+            }
+        };
+    }, [connected, userId]);
+
     // ─── Scroll xuống cuối ──────────────────────────────────────────────────
 
     useEffect(() => {
@@ -94,6 +154,10 @@ const StaffChat = () => {
         if (selectedRoom?.id && connected) {
             subscribeToRoom(selectedRoom.id);
             sendMarkAsRead(selectedRoom.id);
+            // Gửi presence online cho phòng chat
+            if (sendPresence) {
+                sendPresence(selectedRoom.id, true);
+            }
         }
     }, [selectedRoom?.id, connected]);
 
@@ -101,10 +165,28 @@ const StaffChat = () => {
 
     const handleSelectRoom = async (room) => {
         setSelectedRoom(room);
+
+        // Reset unread ngay lập tức trên UI (không cần đợi API)
+        setRooms(prev => ({
+            pending: prev.pending.map(r =>
+                r.id === room.id ? { ...r, unreadStaff: 0 } : r
+            ),
+            mine: prev.mine.map(r =>
+                r.id === room.id ? { ...r, unreadStaff: 0 } : r
+            ),
+            closed: prev.closed,
+        }));
+
         try {
             const res = await chatApi.getMessages(room.id);
             if (res.success) {
                 setMessages(res.data || []);
+            }
+
+            // Đánh dấu đã đọc qua REST + WebSocket
+            await chatApi.markAsRead(room.id);
+            if (connected) {
+                sendMarkAsRead(room.id);
             }
         } catch (err) {
             console.error('Lỗi load tin nhắn:', err);
@@ -227,8 +309,10 @@ const StaffChat = () => {
                             onClick={() => setActiveTab('mine')}
                         >
                             Của tôi
-                            {rooms.mine.length > 0 && (
-                                <Badge bg="success" className="count-badge">{rooms.mine.length}</Badge>
+                            {rooms.mine.filter(r => r.unreadStaff > 0).length > 0 && (
+                                <Badge bg="danger" className="count-badge">
+                                    {rooms.mine.reduce((sum, r) => sum + (r.unreadStaff || 0), 0)}
+                                </Badge>
                             )}
                         </button>
                         <button
@@ -367,7 +451,15 @@ const StaffChat = () => {
                             <div className="info-item">
                                 <span className="label">Tạo lúc:</span>
                                 <span style={{ fontSize: '0.75rem' }}>
-                                    {selectedRoom.createdAt ? new Date(selectedRoom.createdAt).toLocaleString('vi-VN') : '—'}
+                                    {selectedRoom.createdAt ? (() => {
+                                        try {
+                                            if (Array.isArray(selectedRoom.createdAt)) {
+                                                const [y, m, d, h = 0, min = 0] = selectedRoom.createdAt;
+                                                return new Date(y, m - 1, d, h, min).toLocaleString('vi-VN');
+                                            }
+                                            return new Date(selectedRoom.createdAt).toLocaleString('vi-VN');
+                                        } catch { return '—'; }
+                                    })() : '—'}
                                 </span>
                             </div>
                         </div>

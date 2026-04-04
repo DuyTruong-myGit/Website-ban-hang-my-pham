@@ -1,12 +1,18 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useChat } from "../../context/ChatContext";
 
 const AdminLayout = ({ children }) => {
   const { user, logout } = useAuth();
+  const chatContext = useChat();
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Gửi offline presence trước khi logout để customer thấy offline ngay
+    if (chatContext?.sendOfflineBeforeLogout) {
+      chatContext.sendOfflineBeforeLogout();
+    }
     logout();
     navigate("/login");
   };
@@ -22,6 +28,8 @@ const AdminLayout = ({ children }) => {
     { path: "/admin/users", icon: "bi-people", label: "Quản lý Users" },
     { path: "/admin/inventory", icon: "bi-box-seam", label: "Tồn kho" },
     { path: "/admin/logs", icon: "bi-journal-text", label: "Admin Logs" },
+    { path: "/admin/chats", icon: "bi-chat-dots", label: "Quản lý Chat" },
+    { path: "/admin/reviews", icon: "bi-star", label: "Quản lý Đánh giá" }, // TV4
   ];
 
   const staffMenuItems = [
@@ -32,6 +40,7 @@ const AdminLayout = ({ children }) => {
     },
     { path: "/staff/orders", icon: "bi-bag-check", label: "Xử lý Đơn hàng" },
     { path: "/staff/chats", icon: "bi-chat-dots", label: "Hỗ trợ Khách (Chat)" }, // TV4 - Chat
+    { path: "/staff/questions", icon: "bi-question-circle", label: "Hỏi đáp" }, // TV4 - Q&A
   ];
 
   const isAdmin = user?.role === "admin";

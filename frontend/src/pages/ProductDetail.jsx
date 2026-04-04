@@ -15,16 +15,24 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import VariantSelector from "../components/common/VariantSelector";
 import ProductGrid from "../components/common/ProductGrid";
+import ReviewList from "../components/review/ReviewList";
+import ReviewForm from "../components/review/ReviewForm";
+import QuestionList from "../components/review/QuestionList";
+import QuestionForm from "../components/review/QuestionForm";
 import { productApi, brandApi } from "../services/customerService";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import { wishlistApi } from "../services/wishlistService";
 
 const ProductDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { user } = useAuth();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLiked, setIsLiked] = useState(false);
 
   const [mainImage, setMainImage] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -34,6 +42,7 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [reviewKey, setReviewKey] = useState(0); // Force reload reviews
   const [cartMessage, setCartMessage] = useState(null);
 
   useEffect(() => {
@@ -44,6 +53,17 @@ const ProductDetail = () => {
         if (res?.success) {
           const prodData = res.data;
           setProduct(prodData);
+
+          // Check wishlist
+          if (user) {
+            wishlistApi.checkWishlist(prodData.id || prodData._id)
+              .then(wRes => {
+                if (wRes.success) setIsLiked(wRes.data.inWishlist);
+              })
+              .catch(() => {});
+          } else {
+            setIsLiked(false);
+          }
 
           if (prodData.images && prodData.images.length > 0) {
             setMainImage(prodData.images[0]);
@@ -93,6 +113,17 @@ const ProductDetail = () => {
   useEffect(() => {
     setQuantity(1);
   }, [slug]);
+
+  useEffect(() => {
+    const handleWishlistChange = (e) => {
+        const { productId, liked } = e.detail;
+        if (product && (product.id || product._id) === productId) {
+            setIsLiked(liked);
+        }
+    };
+    window.addEventListener('wishlistChanged', handleWishlistChange);
+    return () => window.removeEventListener('wishlistChanged', handleWishlistChange);
+  }, [product]);
 
   if (loading) return <Loading message="Đang tải thông tin sản phẩm..." />;
   if (!product)
@@ -151,6 +182,36 @@ const ProductDetail = () => {
       navigate('/login');
     } else {
       setCartMessage({ type: 'danger', text: result.message || 'Có lỗi xảy ra!' });
+      setTimeout(() => setCartMessage(null), 3000);
+    }
+  };
+
+  const handleToggleWishlist = async () => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để thêm vào yêu thích");
+      navigate("/login");
+      return;
+    }
+    try {
+      const productId = product.id || product._id;
+      if (isLiked) {
+        const res = await wishlistApi.removeFromWishlist(productId);
+        if (res.success) {
+           setIsLiked(false);
+           setCartMessage({ type: 'secondary', text: 'Đã bỏ yêu thích!' });
+           window.dispatchEvent(new CustomEvent('wishlistChanged', { detail: { productId, liked: false } }));
+        }
+      } else {
+        const res = await wishlistApi.addToWishlist(productId);
+        if (res.success) {
+           setIsLiked(true);
+           setCartMessage({ type: 'success', text: 'Đã thêm vào yêu thích!' });
+           window.dispatchEvent(new CustomEvent('wishlistChanged', { detail: { productId, liked: true } }));
+        }
+      }
+      setTimeout(() => setCartMessage(null), 3000);
+    } catch(err) {
+      setCartMessage({ type: 'danger', text: 'Có lỗi xảy ra' });
       setTimeout(() => setCartMessage(null), 3000);
     }
   };
@@ -329,7 +390,7 @@ const ProductDetail = () => {
                 <Button
                   variant="outline-success"
                   size="lg"
-                  className="w-50 border-2 fw-bold text-hasaki bg-white"
+                  className="flex-grow-1 border-2 fw-bold text-hasaki bg-white"
                   disabled={!product.inStock || addingToCart}
                   onClick={handleAddToCart}
                 >
@@ -342,11 +403,21 @@ const ProductDetail = () => {
                 <Button
                   variant="success"
                   size="lg"
-                  className="w-50 fw-bold bg-hasaki border-0"
+                  className="flex-grow-1 fw-bold bg-hasaki border-0"
                   disabled={!product.inStock || addingToCart}
                   onClick={handleBuyNow}
                 >
                   MUA NGAY
+                </Button>
+                <Button
+                  variant="light"
+                  size="lg"
+                  className="border"
+                  title={isLiked ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+                  onClick={handleToggleWishlist}
+                  style={{ width: '60px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <i className={`bi ${isLiked ? 'bi-heart-fill' : 'bi-heart'} text-danger fs-5`}></i>
                 </Button>
               </div>
 
@@ -362,7 +433,7 @@ const ProductDetail = () => {
           </Row>
         </div>
 
-        {/* ---  CẤU TRÚC TABS CHO MÔ TẢ & THUỘC TÍNH --- */}
+        {/* ---  CẤU TRÚC TABS CHO MÔ TẢ & THUỘC TÍNH & ĐÁNH GIÁ & HỎI ĐÁP --- */}
         <div className="bg-white p-4 rounded shadow-sm mb-4">
           <Tabs defaultActiveKey="description" className="mb-4 custom-tabs">
             <Tab
@@ -415,6 +486,39 @@ const ProductDetail = () => {
                 ) : (
                   <p className="text-muted">Chưa có thông tin chi tiết.</p>
                 )}
+              </div>
+            </Tab>
+
+            {/* Tab Đánh giá — TV4 */}
+            <Tab
+              eventKey="reviews"
+              title={
+                <span className="fw-bold fs-6">
+                  Đánh giá ({product.reviewCount || 0})
+                </span>
+              }
+            >
+              <div className="mt-3">
+                <ReviewList key={reviewKey} productId={product.id || product._id} />
+                <hr />
+                <ReviewForm
+                  productId={product.id || product._id}
+                  onReviewCreated={() => setReviewKey(prev => prev + 1)}
+                />
+              </div>
+            </Tab>
+
+            {/* Tab Hỏi đáp — TV4 */}
+            <Tab
+              eventKey="questions"
+              title={<span className="fw-bold fs-6">Hỏi đáp</span>}
+            >
+              <div className="mt-3">
+                <QuestionList productId={product.id || product._id} />
+                <QuestionForm
+                  productId={product.id || product._id}
+                  onQuestionCreated={() => {}}
+                />
               </div>
             </Tab>
           </Tabs>
