@@ -9,7 +9,12 @@ const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
-
+  const [keyword, setKeyword] = useState("");
+  const handleSearch = () => {
+    if (keyword.trim()) {
+      navigate(`/search?keyword=${encodeURIComponent(keyword.trim())}`);
+    }
+  };
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -46,18 +51,21 @@ const Header = () => {
                 to="/"
                 className="text-white text-decoration-none fw-bold fs-3"
               >
-                HASAKI
+                AuraBeauty
               </Link>
             </Col>
             <Col xs={6}>
               <InputGroup className="search-container">
                 <Form.Control
                   placeholder="Tìm kiếm sản phẩm, thương hiệu..."
-                  aria-label="Search"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
                 <Button
                   variant="light"
                   className="bg-white border-0 text-hasaki"
+                  onClick={handleSearch}
                 >
                   <i className="bi bi-search"></i>
                 </Button>
@@ -115,20 +123,50 @@ const Header = () => {
             {/* COMPONENT ĐƯỢC TÁI SỬ DỤNG Ở ĐÂY */}
             <MegaMenu categories={categories} />
 
-            <nav className="d-flex align-items-center">
-              <Link to="/" className="nav-link-item">
+            <nav className="d-flex align-items-center gap-4 ms-4 fw-medium flex-grow-1">
+              {/* Flash Deals: Nhảy sang tìm kiếm và tự động sắp xếp Giá từ thấp đến cao */}
+              <Link
+                to="/search?sort=price_asc"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
                 Flash Deals
               </Link>
-              <Link to="/" className="nav-link-item">
+
+              {/* Hot Deals: Nhảy sang tìm kiếm và tự động lọc Hàng Bán Chạy */}
+              <Link
+                to="/search?sort=best_seller"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
                 Hot Deals
               </Link>
-              <Link to="/" className="nav-link-item">
+
+              {/* Thương hiệu: Dẫn vào trang Tìm kiếm chung để dùng cột lọc Thương hiệu bên trái */}
+              <Link
+                to="/search"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
                 Thương hiệu
               </Link>
-              <Link to="/" className="nav-link-item">
+
+              {/* Skin & Spa: Trỏ thẳng vào danh mục mũi nhọn của shop */}
+              <Link
+                to="/category/cham-soc-da"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
                 Skin & Spa
               </Link>
-              <Link to="/" className="nav-link-item">
+
+              {/* Cẩm nang: Thường thuộc phạm vi quản lý Bài viết/Blog của thành viên khác */}
+              <Link
+                to="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert(
+                    "Tính năng Cẩm nang (Blog) thuộc phạm vi đang được phát triển!",
+                  );
+                }}
+                className="text-dark text-decoration-none hover-hasaki"
+              >
                 Cẩm nang
               </Link>
             </nav>

@@ -387,7 +387,7 @@ const AdminProducts = () => {
         onClose={() => setShowModal(false)}
         onConfirm={handleSubmit}
         confirmText="Lưu Sản Phẩm"
-        size="lg"
+        size="xl"
       >
         <div
           className="row g-3"
