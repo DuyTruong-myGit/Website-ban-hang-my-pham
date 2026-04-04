@@ -31,6 +31,11 @@ public enum ErrorCode {
     ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "Không thể hủy đơn hàng ở trạng thái hiện tại."),
     ORDER_INVALID_STATUS(HttpStatus.BAD_REQUEST, "Trạng thái đơn hàng không hợp lệ."),
 
+    // Chat Errors — TV4
+    CHATROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "Phòng chat không tồn tại."),
+    CHATROOM_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "Bạn đã có phòng chat đang mở. Vui lòng sử dụng phòng hiện tại."),
+    MESSAGE_SEND_FAILED(HttpStatus.BAD_REQUEST, "Không thể gửi tin nhắn. Phòng chat đã đóng."),
+
     // Server Errors
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.");
 

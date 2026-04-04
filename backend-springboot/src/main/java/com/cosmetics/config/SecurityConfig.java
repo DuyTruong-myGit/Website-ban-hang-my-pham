@@ -64,9 +64,11 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**", "/api/brands/**", "/api/reviews/product/**", "/api/banners/**", "/api/pages/**").permitAll()
+                .requestMatchers("/ws/**").permitAll() // WebSocket endpoint — TV4
+                .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**", "/api/brands/**", "/api/reviews/product/**", "/api/questions/product/**", "/api/banners/**", "/api/pages/**").permitAll()
                 // /api/cart/** yêu cầu JWT — TV3
                 // /api/orders/** yêu cầu JWT — TV3
+                // /api/chat/** yêu cầu JWT — TV4
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
