@@ -11,14 +11,18 @@ import {
   Form,
   InputGroup,
 } from "react-bootstrap";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Loading from "../components/common/Loading";
 import VariantSelector from "../components/common/VariantSelector";
 import ProductGrid from "../components/common/ProductGrid";
 import { productApi, brandApi } from "../services/customerService";
+import { useCart } from "../context/CartContext";
 
 const ProductDetail = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,6 +33,8 @@ const ProductDetail = () => {
   //  State cho Số lượng và Sản phẩm liên quan
   const [quantity, setQuantity] = useState(1);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState(null);
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -113,6 +119,41 @@ const ProductDetail = () => {
 
   const handleDecrease = () => setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
   const handleIncrease = () => setQuantity((prev) => prev + 1);
+
+  const handleAddToCart = async () => {
+    const productId = product?.id || product?._id;
+    if (!productId) return;
+    setAddingToCart(true);
+    setCartMessage(null);
+    const variantSku = selectedVariant?.sku || '';
+    const result = await addToCart(productId, quantity, variantSku);
+    setAddingToCart(false);
+    if (result.success) {
+      setCartMessage({ type: 'success', text: 'Đã thêm vào giỏ hàng!' });
+    } else if (result.message === 'Vui lòng đăng nhập để thêm vào giỏ hàng.') {
+      navigate('/login');
+    } else {
+      setCartMessage({ type: 'danger', text: result.message || 'Có lỗi xảy ra!' });
+    }
+    setTimeout(() => setCartMessage(null), 3000);
+  };
+
+  const handleBuyNow = async () => {
+    const productId = product?.id || product?._id;
+    if (!productId) return;
+    setAddingToCart(true);
+    const variantSku = selectedVariant?.sku || '';
+    const result = await addToCart(productId, quantity, variantSku);
+    setAddingToCart(false);
+    if (result.success) {
+      navigate('/checkout');
+    } else if (result.message === 'Vui lòng đăng nhập để thêm vào giỏ hàng.') {
+      navigate('/login');
+    } else {
+      setCartMessage({ type: 'danger', text: result.message || 'Có lỗi xảy ra!' });
+      setTimeout(() => setCartMessage(null), 3000);
+    }
+  };
 
   return (
     <main className="bg-hasaki-bg-gray pb-5 pt-3">
@@ -279,20 +320,31 @@ const ProductDetail = () => {
                 </div>
               </div>
 
+              {cartMessage && (
+                <div className={`alert alert-${cartMessage.type} py-2 px-3 mb-2 small`} role="alert">
+                  {cartMessage.text}
+                </div>
+              )}
               <div className="d-flex gap-3 mt-2">
                 <Button
                   variant="outline-success"
                   size="lg"
                   className="w-50 border-2 fw-bold text-hasaki bg-white"
-                  disabled={!product.inStock}
+                  disabled={!product.inStock || addingToCart}
+                  onClick={handleAddToCart}
                 >
-                  <i className="bi bi-cart-plus me-2"></i>THÊM VÀO GIỎ
+                  {addingToCart ? (
+                    <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang thêm...</>
+                  ) : (
+                    <><i className="bi bi-cart-plus me-2"></i>THÊM VÀO GIỎ</>
+                  )}
                 </Button>
                 <Button
                   variant="success"
                   size="lg"
                   className="w-50 fw-bold bg-hasaki border-0"
-                  disabled={!product.inStock}
+                  disabled={!product.inStock || addingToCart}
+                  onClick={handleBuyNow}
                 >
                   MUA NGAY
                 </Button>

@@ -10,6 +10,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./index.css";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import Header from "./components/Layout/Header";
 import Footer from "./components/Layout/Footer";
 
@@ -155,6 +156,44 @@ const AppRoutes = () => {
             <AppLayout>
               <PrivateRoute>
                 <UserProfile />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <AppLayout>
+              <Cart />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <Checkout />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/orders"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <Orders />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/orders/:id"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <OrderDetail />
               </PrivateRoute>
             </AppLayout>
           }
