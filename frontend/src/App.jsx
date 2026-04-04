@@ -10,8 +10,17 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./index.css";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import Header from "./components/Layout/Header";
 import Footer from "./components/Layout/Footer";
+
+// Pages — TV3
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminCoupons from './pages/admin/AdminCoupons';
 
 // Pages — TV1
 import Home from "./pages/Home";
@@ -161,6 +170,44 @@ const AppRoutes = () => {
             </AppLayout>
           }
         />
+        <Route
+          path="/cart"
+          element={
+            <AppLayout>
+              <Cart />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <Checkout />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/orders"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <Orders />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/orders/:id"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <OrderDetail />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
 
         {/* === Admin Pages — TV5 (dùng AdminLayout riêng, không Header/Footer) === */}
         <Route
@@ -200,6 +247,22 @@ const AppRoutes = () => {
           element={
             <AdminRoute>
               <AdminProducts />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminRoute>
+              <AdminOrders />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/coupons"
+          element={
+            <AdminRoute>
+              <AdminCoupons />
             </AdminRoute>
           }
         />
@@ -253,7 +316,9 @@ const AppRoutes = () => {
 function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <CartProvider>
+        <AppRoutes />
+      </CartProvider>
     </AuthProvider>
   );
 }
