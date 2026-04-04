@@ -31,6 +31,14 @@ public enum ErrorCode {
     ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "Không thể hủy đơn hàng ở trạng thái hiện tại."),
     ORDER_INVALID_STATUS(HttpStatus.BAD_REQUEST, "Trạng thái đơn hàng không hợp lệ."),
 
+    // Coupon Errors — TV3
+    COUPON_NOT_FOUND(HttpStatus.NOT_FOUND, "Mã giảm giá không tồn tại."),
+    COUPON_EXPIRED(HttpStatus.BAD_REQUEST, "Mã giảm giá đã hết hạn."),
+    COUPON_INACTIVE(HttpStatus.BAD_REQUEST, "Mã giảm giá không còn hiệu lực."),
+    COUPON_USAGE_LIMIT(HttpStatus.BAD_REQUEST, "Mã giảm giá đã hết lượt sử dụng."),
+    COUPON_MIN_ORDER(HttpStatus.BAD_REQUEST, "Đơn hàng chưa đạt giá trị tối thiểu để áp dụng mã giảm giá."),
+    COUPON_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "Mã giảm giá đã tồn tại."),
+
     // Server Errors
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.");
 
