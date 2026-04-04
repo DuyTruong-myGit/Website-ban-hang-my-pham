@@ -2,6 +2,7 @@ package com.cosmetics.service;
 
 import com.cosmetics.dto.request.CreateOrderRequest;
 import com.cosmetics.dto.request.UpdateOrderStatusRequest;
+import com.cosmetics.dto.request.ValidateCouponRequest;
 import com.cosmetics.exception.AppException;
 import com.cosmetics.exception.ErrorCode;
 import com.cosmetics.model.Cart;
@@ -51,6 +52,12 @@ public class OrderService {
     @Autowired
     private CartRepository cartRepository;
 
+    @Autowired
+    private CouponService couponService;
+
+    @Autowired
+    private PaymentService paymentService;
+
     // ─────────────────────────────────────────────────────────────────────────
     // TẠO ĐƠN HÀNG
     // ─────────────────────────────────────────────────────────────────────────
@@ -90,7 +97,6 @@ public class OrderService {
 
         // 3. Tính phí ship
         double shippingFee = subtotal >= SHIPPING_THRESHOLD ? 0.0 : SHIPPING_FEE;
-        double total = subtotal + shippingFee;
 
         // 4. Xây dựng ShippingAddress
         ShippingAddress shippingAddress = ShippingAddress.builder()
@@ -111,7 +117,26 @@ public class OrderService {
                 .changedAt(LocalDateTime.now())
                 .build());
 
-        // 6. Tạo đơn hàng
+        // 6. Xử lý coupon nếu có
+        double discount = 0.0;
+        String couponCodeUsed = null;
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            try {
+                ValidateCouponRequest couponReq = new ValidateCouponRequest();
+                couponReq.setCode(request.getCouponCode());
+                couponReq.setOrderAmount(subtotal);
+                java.util.Map<String, Object> couponResult = couponService.validateCoupon(couponReq);
+                discount = ((Number) couponResult.get("discountAmount")).doubleValue();
+                couponCodeUsed = request.getCouponCode().trim().toUpperCase();
+            } catch (AppException e) {
+                // Nếu coupon không hợp lệ, bỏ qua (không fail đơn hàng)
+                discount = 0.0;
+            }
+        }
+
+        double total = subtotal + shippingFee - discount;
+
+        // 7. Tạo đơn hàng
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
                 .userId(userId)
@@ -119,9 +144,9 @@ public class OrderService {
                 .shippingAddress(shippingAddress)
                 .subtotal(subtotal)
                 .shippingFee(shippingFee)
-                .total(total)
-                .discount(0.0)
-                .couponCode(request.getCouponCode())
+                .total(Math.max(0, total))
+                .discount(discount)
+                .couponCode(couponCodeUsed)
                 .paymentMethod(request.getPaymentMethod())
                 .note(request.getNote())
                 .status("pending")
@@ -130,7 +155,15 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 7. Xóa giỏ hàng sau khi đặt hàng thành công
+        // 8. Tăng usedCount của coupon
+        if (couponCodeUsed != null) {
+            couponService.applyCoupon(couponCodeUsed);
+        }
+
+        // 9. Tạo bản ghi thanh toán
+        paymentService.createPaymentRecord(savedOrder);
+
+        // 10. Xóa giỏ hàng sau khi đặt hàng thành công
         cartRepository.deleteByUserId(userId);
 
         return savedOrder;
@@ -216,7 +249,12 @@ public class OrderService {
                 .build());
         order.setStatusHistory(history);
 
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // Đồng bộ trạng thái thanh toán
+        paymentService.syncPaymentStatus(order.getId(), newStatus);
+
+        return savedOrder;
     }
 
     /** Sinh mã đơn hàng dạng: ORD-20260404-XXXXXX */
