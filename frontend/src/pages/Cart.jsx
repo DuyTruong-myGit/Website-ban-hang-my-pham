@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { couponApi } from '../services/couponService';
 import './Cart.css';
 
 // ─── Helper format tiền ──────────────────────────────────────────────────────
@@ -102,9 +103,27 @@ const EmptyCart = () => (
 );
 
 // ─── Order Summary Component ─────────────────────────────────────────────────
-const OrderSummary = ({ totalPrice, totalItems, onCheckout }) => {
+const OrderSummary = ({ totalPrice, totalItems, discount, couponCode, onCheckout, onRemoveCoupon, onApplyCoupon }) => {
+    const [inputCode, setInputCode] = useState('');
+    const [validating, setValidating] = useState(false);
+    const [couponError, setCouponError] = useState('');
+
     const shippingFee = totalPrice >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-    const grandTotal = totalPrice + shippingFee;
+    const grandTotal = Math.max(0, totalPrice + shippingFee - discount);
+
+    const handleApply = async () => {
+        if (!inputCode.trim()) return;
+        setValidating(true);
+        setCouponError('');
+        try {
+            await onApplyCoupon(inputCode.trim());
+            setInputCode('');
+        } catch (err) {
+            setCouponError(err.message);
+        } finally {
+            setValidating(false);
+        }
+    };
 
     return (
         <div className="cart-summary">
@@ -130,6 +149,48 @@ const OrderSummary = ({ totalPrice, totalItems, onCheckout }) => {
                     Mua thêm&nbsp;
                     <strong>{formatVND(SHIPPING_THRESHOLD - totalPrice)}</strong>
                     &nbsp;để được miễn phí vận chuyển
+                </div>
+            )}
+
+            {/* ── Coupon Section ── */}
+            <div className="cart-summary__coupon">
+                {couponCode ? (
+                    <div className="cart-summary__coupon-applied">
+                        <span>
+                            <i className="bi bi-tag-fill me-1 text-success"></i>
+                            <strong>{couponCode}</strong>
+                        </span>
+                        <button className="cart-coupon__remove" onClick={onRemoveCoupon} title="Xóa mã">
+                            <i className="bi bi-x"></i>
+                        </button>
+                    </div>
+                ) : (
+                    <div className="cart-summary__coupon-input">
+                        <input
+                            type="text"
+                            className="cart-coupon__input"
+                            placeholder="Nhập mã giảm giá..."
+                            value={inputCode}
+                            onChange={e => setInputCode(e.target.value.toUpperCase())}
+                            onKeyDown={e => e.key === 'Enter' && handleApply()}
+                        />
+                        <button
+                            className="cart-coupon__btn"
+                            onClick={handleApply}
+                            disabled={validating || !inputCode.trim()}
+                        >
+                            Áp dụng
+                        </button>
+                    </div>
+                )}
+                {couponError && <p className="cart-coupon__error">{couponError}</p>}
+            </div>
+
+            {/* Giảm giá */}
+            {discount > 0 && (
+                <div className="cart-summary__row cart-summary__row--discount">
+                    <span>Giảm giá</span>
+                    <span className="text-success fw-bold">-{formatVND(discount)}</span>
                 </div>
             )}
 
@@ -167,6 +228,8 @@ export default function Cart() {
     const [updating, setUpdating] = useState(null);
     const [clearConfirm, setClearConfirm] = useState(false);
     const [notification, setNotification] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [discount, setDiscount] = useState(0);
 
     // Nếu chưa đăng nhập
     if (!token) {
@@ -221,7 +284,27 @@ export default function Cart() {
     };
 
     const handleCheckout = () => {
-        navigate('/checkout');
+        navigate('/checkout', {
+            state: { couponCode: couponCode || null, discount }
+        });
+    };
+
+    const handleApplyCoupon = async (code) => {
+        const res = await couponApi.validateCoupon(code, totalPrice);
+        if (res.success) {
+            const data = res.data;
+            setCouponCode(code.toUpperCase());
+            setDiscount(data.discountAmount || 0);
+            showNotification(`Áp dụng mã thành công! Giảm ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.discountAmount)}.`);
+        } else {
+            throw new Error(res.message || 'Mã không hợp lệ');
+        }
+    };
+
+    const handleRemoveCoupon = () => {
+        setCouponCode('');
+        setDiscount(0);
+        showNotification('Đã xóa mã giảm giá.');
     };
 
     return (
@@ -302,7 +385,11 @@ export default function Cart() {
                         <OrderSummary
                             totalPrice={totalPrice}
                             totalItems={totalItems}
+                            discount={discount}
+                            couponCode={couponCode}
                             onCheckout={handleCheckout}
+                            onApplyCoupon={handleApplyCoupon}
+                            onRemoveCoupon={handleRemoveCoupon}
                         />
                     </div>
                 )}

@@ -48,14 +48,11 @@ const StaffOrders = () => {
     };
 
     const statusMap = {
-        pending: { label: 'Chờ xác nhận', color: 'warning' },
-        confirmed: { label: 'Đã xác nhận', color: 'info' },
-        processing: { label: 'Đang xử lý', color: 'primary' },
-        shipping: { label: 'Đang giao', color: 'info' },
-        delivered: { label: 'Đã giao', color: 'success' },
-        cancelled: { label: 'Đã hủy', color: 'danger' },
-        refunded: { label: 'Hoàn tiền', color: 'secondary' },
-        returned: { label: 'Trả hàng', color: 'dark' },
+        pending:   { label: 'Chờ xác nhận', color: 'warning'  },
+        confirmed: { label: 'Đã xác nhận',  color: 'info'     },
+        shipping:  { label: 'Đang giao',    color: 'primary'  },
+        delivered: { label: 'Đã giao',      color: 'success'  },
+        cancelled: { label: 'Đã hủy',       color: 'danger'   },
     };
 
     const formatPrice = (price) => {
@@ -104,22 +101,32 @@ const StaffOrders = () => {
                     return <span className="text-muted small">Hoàn tất</span>;
                 }
                 const nextStatusMap = {
-                    pending: 'confirmed',
-                    confirmed: 'processing',
-                    processing: 'shipping',
-                    shipping: 'delivered',
+                    pending:   'confirmed',
+                    confirmed: 'shipping',
+                    shipping:  'delivered',
                 };
                 const nextStatus = nextStatusMap[row.status];
-                if (!nextStatus) return '—';
                 const nextLabel = statusMap[nextStatus]?.label || nextStatus;
 
                 return (
-                    <button
-                        className="btn btn-sm btn-outline-success"
-                        onClick={() => handleStatusChange(row.id || row._id, nextStatus)}
-                    >
-                        → {nextLabel}
-                    </button>
+                    <div className="d-flex gap-1 flex-wrap">
+                        {nextStatus && (
+                            <button
+                                className="btn btn-sm btn-outline-success"
+                                onClick={() => handleStatusChange(row.id || row._id, nextStatus)}
+                            >
+                                → {nextLabel}
+                            </button>
+                        )}
+                        {row.status !== 'cancelled' && (
+                            <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleStatusChange(row.id || row._id, 'cancelled')}
+                            >
+                                Hủy
+                            </button>
+                        )}
+                    </div>
                 );
             }
         }

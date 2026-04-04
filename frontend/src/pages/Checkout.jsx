@@ -1,6 +1,6 @@
 // Checkout.jsx — TV3: Trang thanh toán /checkout
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderApi } from '../services/orderService';
@@ -14,11 +14,16 @@ const SHIPPING_FEE = 30000;
 
 export default function Checkout() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { token, user } = useAuth();
     const { items, totalPrice, clearCart } = useCart();
 
+    // Coupon được truyền từ trang giỏ hàng
+    const couponFromCart = location.state?.couponCode || '';
+    const discountFromCart = location.state?.discount || 0;
+
     const shippingFee = totalPrice >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-    const grandTotal = totalPrice + shippingFee;
+    const grandTotal = Math.max(0, totalPrice + shippingFee - discountFromCart);
 
     const [form, setForm] = useState({
         fullName: user?.name || '',
@@ -29,6 +34,7 @@ export default function Checkout() {
         street: '',
         paymentMethod: 'cod',
         note: '',
+        couponCode: couponFromCart,
     });
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
@@ -221,6 +227,15 @@ export default function Checkout() {
                                         : <span>{formatVND(shippingFee)}</span>
                                     }
                                 </div>
+                                {discountFromCart > 0 && (
+                                    <div className="checkout-summary__row">
+                                        <span>
+                                            <i className="bi bi-tag-fill me-1 text-success"></i>
+                                            {couponFromCart}
+                                        </span>
+                                        <span className="text-success fw-bold">-{formatVND(discountFromCart)}</span>
+                                    </div>
+                                )}
                                 <div className="checkout-summary__divider"></div>
                                 <div className="checkout-summary__row checkout-summary__row--total">
                                     <span>Tổng cộng</span>

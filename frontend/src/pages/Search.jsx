@@ -1,46 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Form, Breadcrumb, Button } from "react-bootstrap";
-import { useParams, Link } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import ProductGrid from "../components/common/ProductGrid";
 import Loading from "../components/common/Loading";
 import Pagination from "../components/common/Pagination";
-import { productApi, categoryApi, brandApi } from "../services/customerService";
+import { productApi, brandApi } from "../services/customerService";
 
-const Category = () => {
-  const { slug } = useParams();
+const Search = () => {
+  const [searchParams] = useSearchParams();
+  const keyword = searchParams.get("keyword") || "";
 
-  const [category, setCategory] = useState(null);
   const [products, setProducts] = useState([]);
-  const [brands, setBrands] = useState([]); // State lưu danh sách thương hiệu
+  const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Các state cho bộ lọc
-  const [sort, setSort] = useState("newest");
+  // Bộ lọc
+  const [sort, setSort] = useState(searchParams.get("sort") || "newest");
   const [priceRange, setPriceRange] = useState({ min: null, max: null });
   const [selectedBrand, setSelectedBrand] = useState("");
   const [minRating, setMinRating] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(false);
 
-  // 1. Lấy thông tin danh mục hiện tại
-  useEffect(() => {
-    const fetchCategory = async () => {
-      try {
-        const res = await categoryApi.getBySlug(slug);
-        if (res?.success) {
-          setCategory(res.data);
-          clearFilters(); // Reset filter khi đổi danh mục
-        }
-      } catch (error) {
-        console.error("Lỗi lấy danh mục:", error);
-      }
-    };
-    fetchCategory();
-  }, [slug]);
-
-  // 2. Lấy danh sách thương hiệu để render bộ lọc
   useEffect(() => {
     const fetchBrands = async () => {
       try {
@@ -53,20 +36,16 @@ const Category = () => {
     fetchBrands();
   }, []);
 
-  // 3. Lấy danh sách sản phẩm theo bộ lọc
   useEffect(() => {
-    if (!category) return;
-
     const fetchProducts = async () => {
       setLoading(true);
       try {
         const params = {
-          categoryId: category.id || category._id,
+          search: keyword, // Truyền từ khóa tìm kiếm xuống Backend
           page: page,
           limit: 12,
           sort: sort,
         };
-        // Gắn các điều kiện lọc vào params
         if (priceRange.min !== null) params.minPrice = priceRange.min;
         if (priceRange.max !== null) params.maxPrice = priceRange.max;
         if (selectedBrand) params.brandId = selectedBrand;
@@ -76,35 +55,34 @@ const Category = () => {
         const res = await productApi.getProducts(params);
         if (res?.success) {
           setProducts(res.data || []);
-          if (res.pagination) {
-            setTotalPages(res.pagination.totalPages);
-          }
+          if (res.pagination) setTotalPages(res.pagination.totalPages);
         }
       } catch (error) {
-        console.error("Lỗi lấy sản phẩm:", error);
+        console.error("Lỗi tìm kiếm:", error);
       } finally {
         setLoading(false);
       }
     };
     fetchProducts();
-  }, [category, page, sort, priceRange, selectedBrand, minRating, inStockOnly]);
+  }, [keyword, page, sort, priceRange, selectedBrand, minRating, inStockOnly]);
 
-  // Xử lý các sự kiện thay đổi filter
+  // Reset page khi từ khóa thay đổi
+  useEffect(() => {
+    setPage(1);
+  }, [keyword]);
+
   const handlePriceChange = (min, max) => {
     setPriceRange({ min, max });
     setPage(1);
   };
-
   const handleBrandChange = (brandId) => {
     setSelectedBrand(brandId);
     setPage(1);
   };
-
   const handleRatingChange = (rating) => {
     setMinRating(rating);
     setPage(1);
   };
-
   const clearFilters = () => {
     setPriceRange({ min: null, max: null });
     setSelectedBrand("");
@@ -114,13 +92,6 @@ const Category = () => {
     setPage(1);
   };
 
-  if (!category && !loading)
-    return (
-      <Container className="py-5 text-center">
-        <h5>Không tìm thấy danh mục!</h5>
-      </Container>
-    );
-
   return (
     <main className="bg-hasaki-bg-gray pb-5 pt-3">
       <Container>
@@ -128,13 +99,11 @@ const Category = () => {
           <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/" }}>
             Trang chủ
           </Breadcrumb.Item>
-          <Breadcrumb.Item active>
-            {category?.name || "Đang tải..."}
-          </Breadcrumb.Item>
+          <Breadcrumb.Item active>Tìm kiếm: "{keyword}"</Breadcrumb.Item>
         </Breadcrumb>
 
         <Row className="g-3">
-          {/* CỘT BỘ LỌC */}
+          {/* BỘ LỌC TƯƠNG TỰ TRANG DANH MỤC */}
           <Col lg={3}>
             <div className="bg-white p-3 rounded shadow-sm mb-3">
               <div className="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
@@ -150,7 +119,6 @@ const Category = () => {
                 </Button>
               </div>
 
-              {/* Lọc Giá */}
               <h6 className="fw-bold mb-2 small text-muted">KHOẢNG GIÁ</h6>
               <Form className="mb-4">
                 <Form.Check
@@ -195,7 +163,6 @@ const Category = () => {
                 />
               </Form>
 
-              {/* Lọc Thương hiệu */}
               <h6 className="fw-bold mb-2 small text-muted border-top pt-3">
                 THƯƠNG HIỆU
               </h6>
@@ -228,7 +195,6 @@ const Category = () => {
                 ))}
               </Form>
 
-              {/* Lọc Đánh giá */}
               <h6 className="fw-bold mb-2 small text-muted border-top pt-3">
                 ĐÁNH GIÁ TỪ KHÁCH HÀNG
               </h6>
@@ -275,7 +241,6 @@ const Category = () => {
                 />
               </Form>
 
-              {/* Lọc Tình trạng kho */}
               <h6 className="fw-bold mb-2 small text-muted border-top pt-3">
                 TÌNH TRẠNG HÀNG
               </h6>
@@ -294,10 +259,13 @@ const Category = () => {
             </div>
           </Col>
 
-          {/* CỘT SẢN PHẨM */}
+          {/* KẾT QUẢ TÌM KIẾM */}
           <Col lg={9}>
             <div className="bg-white p-3 rounded shadow-sm mb-3 d-flex justify-content-between align-items-center">
-              <h5 className="mb-0 fw-bold">{category?.name}</h5>
+              <h5 className="mb-0 fw-bold">
+                Kết quả tìm kiếm cho:{" "}
+                <span className="text-hasaki">"{keyword}"</span>
+              </h5>
               <div className="d-flex align-items-center gap-2">
                 <span className="text-muted small text-nowrap">Sắp xếp:</span>
                 <Form.Select
@@ -319,12 +287,12 @@ const Category = () => {
             </div>
 
             {loading ? (
-              <Loading message="Đang tải sản phẩm..." />
+              <Loading message="Đang tìm kiếm..." />
             ) : (
               <>
                 <ProductGrid
                   products={products}
-                  emptyMessage="Không có sản phẩm nào phù hợp với bộ lọc."
+                  emptyMessage={`Rất tiếc, không tìm thấy sản phẩm nào khớp với từ khóa "${keyword}".`}
                 />
                 {products.length > 0 && (
                   <div className="mt-4">
@@ -344,4 +312,4 @@ const Category = () => {
   );
 };
 
-export default Category;
+export default Search;

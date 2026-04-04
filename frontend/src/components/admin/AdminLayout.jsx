@@ -17,6 +17,8 @@ const AdminLayout = ({ children }) => {
     { path: "/admin/products", icon: "bi-box", label: "Sản phẩm" },
     { path: "/admin/brands", icon: "bi-award", label: "Thương hiệu" },
     { path: "/admin/banners", icon: "bi-images", label: "Quản lý Banner" },
+    { path: "/admin/orders", icon: "bi-bag-check", label: "Đơn hàng" },
+    { path: "/admin/coupons", icon: "bi-tag", label: "Mã giảm giá" },
     { path: "/admin/users", icon: "bi-people", label: "Quản lý Users" },
     { path: "/admin/inventory", icon: "bi-box-seam", label: "Tồn kho" },
     { path: "/admin/logs", icon: "bi-journal-text", label: "Admin Logs" },

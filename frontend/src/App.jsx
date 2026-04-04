@@ -22,6 +22,7 @@ import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import AdminOrders from './pages/admin/AdminOrders';
+import AdminCoupons from './pages/admin/AdminCoupons';
 
 // Pages — TV1
 import Home from "./pages/Home";
@@ -34,6 +35,7 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminBrands from "./pages/admin/AdminBrands";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminProducts from "./pages/admin/AdminProducts";
+import Search from "./pages/Search";
 // Pages — TV5
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -140,6 +142,14 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/search"
+          element={
+            <AppLayout>
+              <Search />
+            </AppLayout>
+          }
+        />
+        <Route
           path="/login"
           element={
             <AppLayout>
@@ -161,6 +171,44 @@ const AppRoutes = () => {
             <AppLayout>
               <PrivateRoute>
                 <UserProfile />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <AppLayout>
+              <Cart />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <Checkout />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/orders"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <Orders />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/orders/:id"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <OrderDetail />
               </PrivateRoute>
             </AppLayout>
           }
@@ -204,6 +252,22 @@ const AppRoutes = () => {
           element={
             <AdminRoute>
               <AdminProducts />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <AdminRoute>
+              <AdminOrders />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/coupons"
+          element={
+            <AdminRoute>
+              <AdminCoupons />
             </AdminRoute>
           }
         />

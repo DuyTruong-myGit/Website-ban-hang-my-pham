@@ -4,7 +4,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import DataTable from '../../components/admin/DataTable';
 import Loading from '../../components/common/Loading';
 import Pagination from '../../components/common/Pagination';
-import { orderApi } from '../../services/orderService';
+import { useAuth } from '../../context/AuthContext';
 
 const formatVND = (n) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);
@@ -24,27 +24,39 @@ const NEXT_STATUS = {
 };
 
 export default function AdminOrders() {
+    const { authAxios } = useAuth();
     const [orders,      setOrders]      = useState([]);
     const [loading,     setLoading]     = useState(true);
+    const [error,       setError]       = useState('');
     const [page,        setPage]        = useState(0);
     const [totalPages,  setTotalPages]  = useState(0);
     const [statusFilter,setStatusFilter]= useState('');
     const [updating,    setUpdating]    = useState(null);
     const [notification,setNotification]= useState(null);
 
+    // Tracking code modal state
+    const [trackingModal, setTrackingModal] = useState(null); // { orderId, nextStatus }
+    const [trackingInput, setTrackingInput] = useState('');
+
     useEffect(() => { fetchOrders(0); }, [statusFilter]);
 
     const fetchOrders = async (p = 0) => {
         setLoading(true);
+        setError('');
         try {
-            const res = await orderApi.getAllOrders(statusFilter, p, 20);
-            if (res.success) {
-                setOrders(res.data || []);
+            let url = `/admin/orders?page=${p}&limit=20`;
+            if (statusFilter) url += `&status=${statusFilter}`;
+            const res = await authAxios.get(url);
+            if (res.data.success) {
+                setOrders(res.data.data || []);
                 setPage(p);
-                if (res.pagination) setTotalPages(res.pagination.totalPages);
+                if (res.data.pagination) setTotalPages(res.data.pagination.totalPages);
+            } else {
+                setError(res.data.message || 'Không tải được dữ liệu.');
             }
         } catch (err) {
-            console.error(err);
+            console.error('AdminOrders fetch error:', err);
+            setError(err.response?.data?.message || err.message || 'Lỗi kết nối server.');
         } finally {
             setLoading(false);
         }
@@ -56,18 +68,38 @@ export default function AdminOrders() {
     };
 
     const handleUpdateStatus = async (orderId, newStatus) => {
+        // Nếu chuyển sang 'shipping' → mở modal nhập mã vận đơn
+        if (newStatus === 'shipping') {
+            setTrackingModal({ orderId, nextStatus: newStatus });
+            setTrackingInput('');
+            return;
+        }
         if (!window.confirm(`Xác nhận chuyển sang trạng thái: ${STATUS_MAP[newStatus]?.label || newStatus}?`)) return;
+        await submitStatusUpdate(orderId, newStatus, '');
+    };
+
+    const handleTrackingSubmit = async () => {
+        if (!trackingModal) return;
+        await submitStatusUpdate(trackingModal.orderId, trackingModal.nextStatus, trackingInput);
+        setTrackingModal(null);
+        setTrackingInput('');
+    };
+
+    const submitStatusUpdate = async (orderId, newStatus, trackingCode) => {
         setUpdating(orderId);
         try {
-            const res = await orderApi.updateOrderStatus(orderId, newStatus);
-            if (res.success) {
-                setOrders(prev => prev.map(o => o.id === orderId ? res.data : o));
+            const res = await authAxios.put(`/admin/orders/${orderId}/status`, {
+                status: newStatus,
+                trackingCode: trackingCode || undefined
+            });
+            if (res.data.success) {
+                setOrders(prev => prev.map(o => o.id === orderId ? res.data.data : o));
                 showNotification('Cập nhật trạng thái thành công.');
             } else {
-                showNotification(res.message, 'error');
+                showNotification(res.data.message, 'error');
             }
         } catch (err) {
-            showNotification(err.message, 'error');
+            showNotification(err.response?.data?.message || err.message, 'error');
         } finally {
             setUpdating(null);
         }
@@ -77,15 +109,15 @@ export default function AdminOrders() {
         if (!window.confirm('Xác nhận HỦY đơn hàng này?')) return;
         setUpdating(orderId);
         try {
-            const res = await orderApi.updateOrderStatus(orderId, 'cancelled', 'Admin hủy đơn');
-            if (res.success) {
-                setOrders(prev => prev.map(o => o.id === orderId ? res.data : o));
+            const res = await authAxios.put(`/admin/orders/${orderId}/status`, { status: 'cancelled', note: 'Admin hủy đơn' });
+            if (res.data.success) {
+                setOrders(prev => prev.map(o => o.id === orderId ? res.data.data : o));
                 showNotification('Đã hủy đơn hàng.');
             } else {
-                showNotification(res.message, 'error');
+                showNotification(res.data.message, 'error');
             }
         } catch (err) {
-            showNotification(err.message, 'error');
+            showNotification(err.response?.data?.message || err.message, 'error');
         } finally {
             setUpdating(null);
         }
@@ -134,6 +166,12 @@ export default function AdminOrders() {
             render: (row) => row.createdAt
                 ? new Date(row.createdAt).toLocaleDateString('vi-VN')
                 : '—'
+        },
+        {
+            header: 'Mã vận đơn',
+            render: (row) => row.trackingCode
+                ? <code className="small text-success bg-light px-1 rounded">{row.trackingCode}</code>
+                : <span className="text-muted small">—</span>
         },
         {
             header: 'Thao tác',
@@ -190,6 +228,17 @@ export default function AdminOrders() {
                 </div>
             )}
 
+            {/* Error */}
+            {error && (
+                <div className="alert alert-danger d-flex align-items-center gap-2 small">
+                    <i className="bi bi-exclamation-triangle-fill"></i>
+                    <span>{error}</span>
+                    <button className="btn btn-sm btn-outline-danger ms-auto" onClick={() => fetchOrders(page)}>
+                        Thử lại
+                    </button>
+                </div>
+            )}
+
             {/* Status Filter */}
             <div className="admin-card mb-4 p-3 bg-white d-flex gap-2 flex-wrap">
                 <button className={`btn btn-sm ${!statusFilter ? 'btn-primary' : 'btn-outline-secondary'}`}
@@ -205,6 +254,70 @@ export default function AdminOrders() {
 
             <DataTable columns={columns} data={orders} emptyMessage="Không có đơn hàng nào." />
             <Pagination page={page} totalPages={totalPages} onPageChange={(p) => fetchOrders(p)} />
+
+            {/* ── Modal nhập mã vận đơn ── */}
+            {trackingModal && (
+                <div
+                    className="modal d-block"
+                    style={{ background: 'rgba(0,0,0,0.5)' }}
+                    onClick={() => setTrackingModal(null)}
+                >
+                    <div
+                        className="modal-dialog modal-dialog-centered"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="modal-content border-0 shadow-lg">
+                            <div className="modal-header border-0">
+                                <h5 className="modal-title fw-bold">
+                                    <i className="bi bi-truck me-2 text-primary"></i>
+                                    Xác nhận giao hàng
+                                </h5>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    onClick={() => setTrackingModal(null)}
+                                ></button>
+                            </div>
+                            <div className="modal-body">
+                                <p className="text-muted small mb-3">
+                                    Nhập mã vận đơn trước khi chuyển trạng thái sang <strong>Đang giao hàng</strong>.
+                                    Bạn có thể bỏ trống nếu chưa có mã.
+                                </p>
+                                <label className="form-label fw-medium">Mã vận đơn</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="VD: GHN123456789, GHTK987654..."
+                                    value={trackingInput}
+                                    onChange={e => setTrackingInput(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleTrackingSubmit()}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="modal-footer border-0">
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-secondary"
+                                    onClick={() => setTrackingModal(null)}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={handleTrackingSubmit}
+                                    disabled={updating === trackingModal.orderId}
+                                >
+                                    {updating === trackingModal.orderId
+                                        ? <><span className="spinner-border spinner-border-sm me-1"></span>Đang lưu...</>
+                                        : <><i className="bi bi-truck me-1"></i>Xác nhận giao hàng</>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }
