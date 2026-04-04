@@ -152,6 +152,33 @@ public class ChatService {
         // Gửi tin nhắn realtime qua WebSocket
         if (messagingTemplate != null) {
             messagingTemplate.convertAndSend("/topic/chat/" + roomId, savedMessage);
+
+            // Broadcast unread count update cho phòng chat
+            messagingTemplate.convertAndSend("/topic/chat/" + roomId + "/unread",
+                    Map.of(
+                            "roomId", roomId,
+                            "unreadCustomer", room.getUnreadCustomer(),
+                            "unreadStaff", room.getUnreadStaff()
+                    ));
+
+            // Gửi notification cho người nhận (đối phương) qua channel riêng
+            String recipientId;
+            if ("customer".equals(sender.getRole())) {
+                recipientId = room.getStaffId();
+            } else {
+                recipientId = room.getCustomerId();
+            }
+
+            if (recipientId != null) {
+                messagingTemplate.convertAndSend("/topic/user/" + recipientId + "/chat-notification",
+                        Map.of(
+                                "roomId", roomId,
+                                "senderId", senderId,
+                                "senderName", sender.getName(),
+                                "content", request.getContent() != null ? request.getContent() : "[Hình ảnh]",
+                                "unreadCount", "customer".equals(sender.getRole()) ? room.getUnreadStaff() : room.getUnreadCustomer()
+                        ));
+            }
         }
 
         return savedMessage;
@@ -217,5 +244,20 @@ public class ChatService {
         }
 
         chatRoomRepository.save(room);
+    }
+
+    // ── Admin: Xóa phòng chat ───────────────────────────────────────────────
+
+    public void deleteRoom(String roomId) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new AppException(ErrorCode.CHATROOM_NOT_FOUND));
+
+        // Xóa tất cả tin nhắn trong phòng
+        messageRepository.deleteByRoomId(roomId);
+
+        // Xóa phòng chat
+        chatRoomRepository.delete(room);
+
+        log.info("Admin đã xóa phòng chat {} và tất cả tin nhắn", roomId);
     }
 }
