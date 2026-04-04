@@ -11,6 +11,8 @@ import "./index.css";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { ChatProvider } from "./context/ChatContext";
+import ChatPopup from "./components/chat/ChatPopup";
 import Header from "./components/Layout/Header";
 import Footer from "./components/Layout/Footer";
 
@@ -41,6 +43,8 @@ import AdminInventory from "./pages/admin/AdminInventory";
 import AdminLogs from "./pages/admin/AdminLogs";
 import StaffDashboard from "./pages/staff/StaffDashboard";
 import StaffOrders from "./pages/staff/StaffOrders";
+// Pages — TV4
+import StaffChat from "./pages/staff/StaffChat";
 
 // Private Route Wrapper
 const PrivateRoute = ({ children }) => {
@@ -103,6 +107,7 @@ const AppLayout = ({ children }) => {
       <Header />
       <div className="flex-grow-1">{children}</div>
       <Footer />
+      <ChatPopup />
     </div>
   );
 };
@@ -308,6 +313,16 @@ const AppRoutes = () => {
             </StaffRoute>
           }
         />
+
+        {/* === Staff Chat — TV4 === */}
+        <Route
+          path="/staff/chats"
+          element={
+            <StaffRoute>
+              <StaffChat />
+            </StaffRoute>
+          }
+        />
       </Routes>
     </Router>
   );
@@ -317,7 +332,9 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <AppRoutes />
+        <ChatProvider>
+          <AppRoutes />
+        </ChatProvider>
       </CartProvider>
     </AuthProvider>
   );
