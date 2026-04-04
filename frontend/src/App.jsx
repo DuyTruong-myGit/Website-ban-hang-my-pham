@@ -33,6 +33,7 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminBrands from "./pages/admin/AdminBrands";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminProducts from "./pages/admin/AdminProducts";
+import Search from "./pages/Search";
 // Pages — TV5
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -132,6 +133,14 @@ const AppRoutes = () => {
           element={
             <AppLayout>
               <ProductDetail />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <AppLayout>
+              <Search />
             </AppLayout>
           }
         />

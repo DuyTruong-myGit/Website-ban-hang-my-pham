@@ -71,6 +71,12 @@ const Header = () => {
   const { totalItems } = useCart();
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
+  const [keyword, setKeyword] = useState("");
+  const handleSearch = () => {
+    if (keyword.trim()) {
+      navigate(`/search?keyword=${encodeURIComponent(keyword.trim())}`);
+    }
+  };
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const hideTimer = useRef(null);
@@ -143,120 +149,51 @@ const Header = () => {
                 <span className="cursor-pointer">Tải ứng dụng</span>
               </div>
             </div>
-          </Container>
-        </div>
+          </div>
+        </Container>
+      </div>
 
-        <div className="main-header py-2 d-flex align-items-center">
-          <Container>
-            <Row className="align-items-center">
-              <Col xs={2}>
-                <Link to="/" className="text-white text-decoration-none fw-bold fs-3">
-                  HASAKI
-                </Link>
-              </Col>
-              <Col xs={6}>
-                <InputGroup className="search-container">
-                  <Form.Control
-                    placeholder="Tìm kiếm sản phẩm, thương hiệu..."
-                    aria-label="Search"
-                  />
-                  <Button variant="light" className="bg-white border-0 text-hasaki">
-                    <i className="bi bi-search"></i>
-                  </Button>
-                </InputGroup>
-              </Col>
-              <Col xs={4}>
-                <div className="d-flex justify-content-end align-items-center gap-4 text-white">
-
-                  {/* ── Account section ── */}
-                  {user ? (
-                    /* Logged in: hover dropdown */
-                    <div
-                      ref={dropdownRef}
-                      style={dropdownStyles.wrapper}
-                      onMouseEnter={handleMouseEnter}
-                      onMouseLeave={handleMouseLeave}
-                    >
-                      {/* Trigger */}
-                      <div className="d-flex align-items-center gap-2 cursor-pointer" style={{ userSelect: "none" }}>
-                        <i className="bi bi-person-circle fs-4"></i>
-                        <div className="d-flex flex-column lh-1">
-                          <span style={{ fontSize: "11px" }}>Chào,</span>
-                          <span className="fw-medium" style={{ fontSize: "13px" }}>
-                            {user.name}
-                            {dashboardLink && (
-                              <span
-                                style={{
-                                  ...dropdownStyles.badge,
-                                  background: dashboardLink.color + "20",
-                                  color: dashboardLink.color,
-                                  marginLeft: "6px",
-                                }}
-                              >
-                                {user.role}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        <i className="bi bi-chevron-down" style={{ fontSize: "10px", opacity: 0.7 }}></i>
-                      </div>
-
-                      {/* Dropdown menu */}
-                      {showDropdown && (
-                        <div style={dropdownStyles.menu}>
-                          <div style={dropdownStyles.arrow} />
-
-                          {/* Dashboard link (chỉ show nếu admin/staff) */}
-                          {dashboardLink && (
-                            <>
-                              <Link
-                                to={dashboardLink.to}
-                                className="user-dropdown-item"
-                                style={{ ...dropdownStyles.item, color: dashboardLink.color }}
-                                onClick={() => setShowDropdown(false)}
-                              >
-                                <i className={`bi ${dashboardLink.icon}`} style={{ fontSize: "16px" }}></i>
-                                {dashboardLink.label}
-                              </Link>
-                              <div style={dropdownStyles.divider} />
-                            </>
-                          )}
-
-                          {/* Hồ sơ */}
-                          <Link
-                            to="/profile"
-                            className="user-dropdown-item"
-                            style={dropdownStyles.item}
-                            onClick={() => setShowDropdown(false)}
-                          >
-                            <i className="bi bi-person" style={{ fontSize: "16px" }}></i>
-                            Hồ sơ cá nhân
-                          </Link>
-
-                          {/* Đơn hàng (user thường + admin vẫn xem được) */}
-                          <Link
-                            to="/account/orders"
-                            className="user-dropdown-item"
-                            style={dropdownStyles.item}
-                            onClick={() => setShowDropdown(false)}
-                          >
-                            <i className="bi bi-bag-check" style={{ fontSize: "16px" }}></i>
-                            Đơn hàng của tôi
-                          </Link>
-
-                          <div style={dropdownStyles.divider} />
-
-                          {/* Đăng xuất */}
-                          <button
-                            className="user-dropdown-item danger"
-                            style={{ ...dropdownStyles.item, color: "#ef4444" }}
-                            onClick={() => { logout(); setShowDropdown(false); }}
-                          >
-                            <i className="bi bi-box-arrow-right" style={{ fontSize: "16px" }}></i>
-                            Đăng xuất
-                          </button>
-                        </div>
-                      )}
+      <div className="main-header py-2 d-flex align-items-center">
+        <Container>
+          <Row className="align-items-center">
+            <Col xs={2}>
+              <Link
+                to="/"
+                className="text-white text-decoration-none fw-bold fs-3"
+              >
+                AuraBeauty
+              </Link>
+            </Col>
+            <Col xs={6}>
+              <InputGroup className="search-container">
+                <Form.Control
+                  placeholder="Tìm kiếm sản phẩm, thương hiệu..."
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                />
+                <Button
+                  variant="light"
+                  className="bg-white border-0 text-hasaki"
+                  onClick={handleSearch}
+                >
+                  <i className="bi bi-search"></i>
+                </Button>
+              </InputGroup>
+            </Col>
+            <Col xs={4}>
+              <div className="d-flex justify-content-end align-items-center gap-4 text-white">
+                {user ? (
+                  <div
+                    className="d-flex align-items-center gap-2 cursor-pointer"
+                    onClick={() => navigate("/profile")}
+                  >
+                    <i className="bi bi-person-circle fs-4"></i>
+                    <div className="d-flex flex-column lh-1">
+                      <span style={{ fontSize: "11px" }}>Chào,</span>
+                      <span className="fw-medium" style={{ fontSize: "13px" }}>
+                        {user.name}
+                      </span>
                     </div>
                   ) : (
                     /* Not logged in */
@@ -290,27 +227,69 @@ const Header = () => {
                   </Link>
 
                 </div>
-              </Col>
-            </Row>
-          </Container>
-        </div>
+              </div>
+            </Col>
+          </Row>
+        </Container>
+      </div>
 
-        <div className="nav-menu position-relative">
-          <Container>
-            <div className="d-flex">
-              <MegaMenu categories={categories} />
-              <nav className="d-flex align-items-center">
-                <Link to="/" className="nav-link-item">Flash Deals</Link>
-                <Link to="/" className="nav-link-item">Hot Deals</Link>
-                <Link to="/" className="nav-link-item">Thương hiệu</Link>
-                <Link to="/" className="nav-link-item">Skin &amp; Spa</Link>
-                <Link to="/" className="nav-link-item">Cẩm nang</Link>
-              </nav>
-            </div>
-          </Container>
-        </div>
-      </header>
-    </>
+      <div className="nav-menu position-relative">
+        <Container>
+          <div className="d-flex">
+            {/* COMPONENT ĐƯỢC TÁI SỬ DỤNG Ở ĐÂY */}
+            <MegaMenu categories={categories} />
+
+            <nav className="d-flex align-items-center gap-4 ms-4 fw-medium flex-grow-1">
+              {/* Flash Deals: Nhảy sang tìm kiếm và tự động sắp xếp Giá từ thấp đến cao */}
+              <Link
+                to="/search?sort=price_asc"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
+                Flash Deals
+              </Link>
+
+              {/* Hot Deals: Nhảy sang tìm kiếm và tự động lọc Hàng Bán Chạy */}
+              <Link
+                to="/search?sort=best_seller"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
+                Hot Deals
+              </Link>
+
+              {/* Thương hiệu: Dẫn vào trang Tìm kiếm chung để dùng cột lọc Thương hiệu bên trái */}
+              <Link
+                to="/search"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
+                Thương hiệu
+              </Link>
+
+              {/* Skin & Spa: Trỏ thẳng vào danh mục mũi nhọn của shop */}
+              <Link
+                to="/category/cham-soc-da"
+                className="text-dark text-decoration-none hover-hasaki"
+              >
+                Skin & Spa
+              </Link>
+
+              {/* Cẩm nang: Thường thuộc phạm vi quản lý Bài viết/Blog của thành viên khác */}
+              <Link
+                to="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert(
+                    "Tính năng Cẩm nang (Blog) thuộc phạm vi đang được phát triển!",
+                  );
+                }}
+                className="text-dark text-decoration-none hover-hasaki"
+              >
+                Cẩm nang
+              </Link>
+            </nav>
+          </div>
+        </Container>
+      </div>
+    </header>
   );
 };
 

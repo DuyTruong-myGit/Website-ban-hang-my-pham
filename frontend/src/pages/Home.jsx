@@ -169,7 +169,7 @@ const Home = () => {
         </Container>
       )}
 
-      {/* 4. THƯƠNG HIỆU NỔI BẬT (MỚI BỔ SUNG) */}
+      {/* 4. THƯƠNG HIỆU NỔI BẬT  */}
       {brands.length > 0 && (
         <Container className="mt-4">
           <div className="bg-white p-3 rounded shadow-sm">
@@ -181,9 +181,11 @@ const Home = () => {
               style={{ scrollbarWidth: "none" }}
             >
               {brands.map((brand) => (
-                <Link
-                  to={`/search?brand=${brand.slug}`}
+                <a
+                  href={brand.website || "#"} // Nếu không có web thì không chạy đi đâu cả
                   key={brand.id || brand._id}
+                  target="_blank" // Mở web hãng ở tab mới để khách không bị thoát khỏi web mình
+                  rel="noopener noreferrer" // Bảo mật khi mở link ngoài
                   className="text-decoration-none border rounded p-2 text-center flex-shrink-0"
                   style={{ width: "150px", transition: "all 0.3s" }}
                   onMouseEnter={(e) => e.currentTarget.classList.add("shadow")}
@@ -210,14 +212,14 @@ const Home = () => {
                   <div className="small fw-medium text-dark mt-2 text-truncate">
                     {brand.name}
                   </div>
-                </Link>
+                </a>
               ))}
             </div>
           </div>
         </Container>
       )}
 
-      {/* 5. SẢN PHẨM MỚI VỀ (MỚI BỔ SUNG) */}
+      {/* 5. SẢN PHẨM MỚI VỀ  */}
       {newArrivals.length > 0 && (
         <Container className="mt-4">
           <div className="d-flex justify-content-between align-items-center mb-3">

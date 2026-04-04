@@ -32,36 +32,32 @@ public class ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.BAD_REQUEST, "Không tìm thấy sản phẩm"));
     }
 
-    // API Lọc Sản Phẩm Động (Giống Hasaki)
+    // API Lọc Sản Phẩm Động 
     public Page<Product> getProducts(String categoryId, String brandId, Double minPrice, Double maxPrice, 
-                                     String search, Boolean inStock, String sort, int page, int limit) {
+                                     String search, Boolean inStock, Integer minRating, String sort, int page, int limit) {
         
         Query query = new Query();
         query.addCriteria(Criteria.where("isActive").is(true)); // Chỉ lấy SP đang hoạt động
 
-        // 1. Lọc theo danh mục
+        // 1. Lọc theo danh mục 
         if (categoryId != null && !categoryId.isEmpty()) {
             List<String> listCategoryIds = new ArrayList<>();
-            listCategoryIds.add(categoryId); // Thêm ID của danh mục hiện tại (Cha)
-
-            // Tìm xem danh mục này có các danh mục con nào không
+            listCategoryIds.add(categoryId); 
             List<Category> childCategories = categoryRepository.findByParentId(categoryId);
             if (childCategories != null && !childCategories.isEmpty()) {
                 for (Category child : childCategories) {
-                    listCategoryIds.add(child.getId()); // Góp thêm ID của các danh mục con vào danh sách
+                    listCategoryIds.add(child.getId());
                 }
             }
-
-            // Dùng toán tử .in() để lấy sản phẩm thuộc BẤT KỲ ID nào trong danh sách trên
             query.addCriteria(Criteria.where("categoryId").in(listCategoryIds));
         }
 
-        // 2. Lọc theo thương hiệu
+        // 2. Lọc theo thương hiệu 
         if (brandId != null && !brandId.isEmpty()) {
             query.addCriteria(Criteria.where("brandId").is(brandId));
         }
 
-        // 3. Lọc theo khoảng giá (Dựa trên giá khuyến mãi salePrice)
+        // 3. Lọc theo khoảng giá 
         if (minPrice != null && maxPrice != null) {
             query.addCriteria(Criteria.where("salePrice").gte(minPrice).lte(maxPrice));
         } else if (minPrice != null) {
@@ -70,22 +66,27 @@ public class ProductService {
             query.addCriteria(Criteria.where("salePrice").lte(maxPrice));
         }
 
-        // 4. Lọc theo trạng thái còn hàng
+        // 4. Lọc theo trạng thái còn hàng 
         if (inStock != null) {
             query.addCriteria(Criteria.where("inStock").is(inStock));
         }
 
-        // 5. Tìm kiếm theo từ khóa (Tìm trong tên hoặc mô tả ngắn)
+        // 5. ĐÃ BỔ SUNG: Lọc theo Rating
+        if (minRating != null && minRating > 0) {
+            query.addCriteria(Criteria.where("avgRating").gte(minRating));
+        }
+
+        // 6. Tìm kiếm theo từ khóa 
         if (search != null && !search.isEmpty()) {
             Criteria searchCriteria = new Criteria().orOperator(
-                    Criteria.where("name").regex(search, "i"), // 'i' là không phân biệt hoa thường
+                    Criteria.where("name").regex(search, "i"), 
                     Criteria.where("shortDescription").regex(search, "i")
             );
             query.addCriteria(searchCriteria);
         }
 
-        // 6. Sắp xếp (Sort)
-        Sort sorting = Sort.by(Sort.Direction.DESC, "createdAt"); // Mặc định Mới nhất
+        // 7. Sắp xếp (Sort) 
+        Sort sorting = Sort.by(Sort.Direction.DESC, "createdAt");
         if (sort != null) {
             switch (sort) {
                 case "price_asc": sorting = Sort.by(Sort.Direction.ASC, "salePrice"); break;
@@ -95,14 +96,11 @@ public class ProductService {
             }
         }
         
-        // 7. Phân trang (Pagination)
-        Pageable pageable = PageRequest.of(page - 1, limit, sorting); // Spring Boot page bắt đầu từ 0
+        // 8. Phân trang (Pagination) 
+        Pageable pageable = PageRequest.of(page - 1, limit, sorting); 
         query.with(pageable);
 
-        // Đếm tổng số bản ghi thỏa mãn điều kiện
         long total = mongoTemplate.count(query, Product.class);
-        
-        // Lấy danh sách dữ liệu
         List<Product> products = mongoTemplate.find(query, Product.class);
 
         return new PageImpl<>(products, pageable, total);

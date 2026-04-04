@@ -17,6 +17,7 @@ public class ProductController {
     private ProductService productService;
 
     // API Lấy danh sách có bộ lọc (Dùng cho Trang Danh mục & Tìm kiếm)
+    // API Lấy danh sách có bộ lọc (Dùng cho Trang Danh mục & Tìm kiếm)
     @GetMapping
     public ApiResponse<List<Product>> getProducts(
             @RequestParam(required = false) String categoryId,
@@ -25,11 +26,12 @@ public class ProductController {
             @RequestParam(required = false) Double maxPrice,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean inStock,
+            @RequestParam(required = false) Integer minRating, // ĐÃ BỔ SUNG
             @RequestParam(required = false, defaultValue = "newest") String sort,
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "20") int limit
     ) {
-        Page<Product> productPage = productService.getProducts(categoryId, brandId, minPrice, maxPrice, search, inStock, sort, page, limit);
+        Page<Product> productPage = productService.getProducts(categoryId, brandId, minPrice, maxPrice, search, inStock, minRating, sort, page, limit);
         
         ApiResponse.Pagination pagination = ApiResponse.Pagination.builder()
                 .page(page)
