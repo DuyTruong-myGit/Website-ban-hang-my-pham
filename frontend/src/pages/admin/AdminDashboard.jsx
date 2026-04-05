@@ -53,7 +53,24 @@ const AdminDashboard = () => {
 
                 if (overviewRes.success) setOverview(overviewRes.data);
                 if (topRes.success) setTopProducts(topRes.data);
-                if (revenueRes.success) setRevenueData(revenueRes.data);
+                if (revenueRes.success) {
+                    const filledData = [];
+                    for (let i = 29; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(d.getDate() - i);
+                        const day = d.getDate();
+                        const month = d.getMonth() + 1;
+                        const year = d.getFullYear();
+                        
+                        const existing = revenueRes.data.find(r => r.day === day && r.month === month && r.year === year);
+                        if (existing) {
+                            filledData.push(existing);
+                        } else {
+                            filledData.push({ day, month, year, revenue: 0, orderCount: 0 });
+                        }
+                    }
+                    setRevenueData(filledData);
+                }
                 if (ordersRes.success) setRecentOrders(ordersRes.data);
                 if (stockRes.success) setLowStock(stockRes.data);
             } catch (err) {
@@ -303,7 +320,6 @@ const AdminDashboard = () => {
                                         <tr>
                                             <th>SKU / ID</th>
                                             <th>Số lượng</th>
-                                            <th>Ngưỡng</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -313,7 +329,6 @@ const AdminDashboard = () => {
                                                 <td>
                                                     <span className="admin-badge admin-badge-danger fs-6">{item.quantity}</span>
                                                 </td>
-                                                <td className="text-muted fw-bold">{item.low_stock_threshold}</td>
                                             </tr>
                                         )) : (
                                             <tr>

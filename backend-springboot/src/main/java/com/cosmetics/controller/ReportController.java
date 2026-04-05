@@ -23,6 +23,11 @@ public class ReportController {
         return ApiResponse.success(overview);
     }
 
+    @GetMapping("/debug")
+    public ApiResponse<List<Map>> getDebug() {
+        return ApiResponse.success(reportService.getTopProducts());
+    }
+
     @GetMapping("/revenue")
     public ApiResponse<List<Map>> getRevenue(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,

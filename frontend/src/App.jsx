@@ -39,7 +39,6 @@ import Search from "./pages/Search";
 // Pages — TV5
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
-import AdminInventory from "./pages/admin/AdminInventory";
 import AdminLogs from "./pages/admin/AdminLogs";
 import StaffDashboard from "./pages/staff/StaffDashboard";
 import StaffOrders from "./pages/staff/StaffOrders";
@@ -304,14 +303,7 @@ const AppRoutes = () => {
             </AdminRoute>
           }
         />
-        <Route
-          path="/admin/inventory"
-          element={
-            <AdminRoute>
-              <AdminInventory />
-            </AdminRoute>
-          }
-        />
+
         <Route
           path="/admin/logs"
           element={

@@ -133,6 +133,8 @@ public class ProductService {
 
     // CRUD cho Admin
     public Product createProduct(Product product) {
+        // Tự động tính inStock dựa trên stock
+        product.setInStock(computeInStock(product));
         return productRepository.save(product);
     }
 
@@ -155,14 +157,32 @@ public class ProductService {
         product.setShortDescription(productDetails.getShortDescription());
         product.setDescription(productDetails.getDescription());
         
+        // Cập nhật tồn kho
+        product.setStock(productDetails.getStock());
+        
         // Cập nhật các cờ trạng thái (Flags) quan trọng
         product.setIsActive(productDetails.getIsActive());
-        product.setInStock(productDetails.getInStock());
+        // Tự động tính inStock dựa trên stock
+        product.setInStock(computeInStock(productDetails));
         product.setIsFeatured(productDetails.getIsFeatured());       
         product.setIsBestSeller(productDetails.getIsBestSeller());   
         product.setIsNew(productDetails.getIsNew());
         
         return productRepository.save(product);
+    }
+
+    /**
+     * Tính toán trạng thái inStock dựa trên stock hiện tại.
+     * Product còn hàng nếu:
+     * - Không có variant: stock > 0
+     * - Có variant: ít nhất 1 variant có stock > 0
+     */
+    private boolean computeInStock(Product product) {
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            return product.getVariants().stream()
+                    .anyMatch(v -> v.getStock() != null && v.getStock() > 0);
+        }
+        return product.getStock() != null && product.getStock() > 0;
     }
 
     public void deleteProduct(String id) {
