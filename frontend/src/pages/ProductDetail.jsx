@@ -141,6 +141,10 @@ const ProductDetail = () => {
         : null;
   const displayBasePrice = selectedVariant?.price || product.basePrice;
 
+  const isAvailable = selectedVariant
+    ? selectedVariant.stock > 0
+    : (product.stock > 0 || product.inStock);
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -350,9 +354,9 @@ const ProductDetail = () => {
                 <div>
                   <h6 className="fw-bold mb-2">Tình trạng:</h6>
                   <span
-                    className={`badge ${product.inStock ? "bg-success" : "bg-danger"} fs-6 py-2 px-3`}
+                    className={`badge ${isAvailable ? "bg-success" : "bg-danger"} fs-6 py-2 px-3`}
                   >
-                    {product.inStock ? "Còn hàng" : "Hết hàng"}
+                    {isAvailable ? "Còn hàng" : "Hết hàng"}
                   </span>
                 </div>
                 <div>
@@ -361,7 +365,7 @@ const ProductDetail = () => {
                     <Button
                       variant="outline-secondary"
                       onClick={handleDecrease}
-                      disabled={!product.inStock}
+                      disabled={!isAvailable}
                     >
                       -
                     </Button>
@@ -373,7 +377,7 @@ const ProductDetail = () => {
                     <Button
                       variant="outline-secondary"
                       onClick={handleIncrease}
-                      disabled={!product.inStock}
+                      disabled={!isAvailable}
                     >
                       +
                     </Button>
@@ -391,7 +395,7 @@ const ProductDetail = () => {
                   variant="outline-success"
                   size="lg"
                   className="flex-grow-1 border-2 fw-bold text-hasaki bg-white"
-                  disabled={!product.inStock || addingToCart}
+                  disabled={!isAvailable || addingToCart}
                   onClick={handleAddToCart}
                 >
                   {addingToCart ? (
@@ -404,7 +408,7 @@ const ProductDetail = () => {
                   variant="success"
                   size="lg"
                   className="flex-grow-1 fw-bold bg-hasaki border-0"
-                  disabled={!product.inStock || addingToCart}
+                  disabled={!isAvailable || addingToCart}
                   onClick={handleBuyNow}
                 >
                   MUA NGAY
