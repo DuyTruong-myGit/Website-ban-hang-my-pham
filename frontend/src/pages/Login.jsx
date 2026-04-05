@@ -56,7 +56,7 @@ const Login = () => {
                                 <Form.Group className="mb-4" controlId="password">
                                     <div className="d-flex justify-content-between align-items-center">
                                         <Form.Label className="small fw-medium">Mật khẩu</Form.Label>
-                                        <Link to="/" className="small text-hasaki text-decoration-none">Quên mật khẩu?</Link>
+                                        <Link to="/forgot-password" className="small text-hasaki text-decoration-none">Quên mật khẩu?</Link>
                                     </div>
                                     <Form.Control
                                         type="password"

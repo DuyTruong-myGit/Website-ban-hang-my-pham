@@ -21,7 +21,43 @@ const Home = () => {
   const [bestSellers, setBestSellers] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
 
+  // AI hỗ trợ: Đồng hồ đếm ngược Flash Sale dynamic, mặc định 2 tiếng
+  const [flashTimer, setFlashTimer] = useState({ hours: 2, minutes: 0, seconds: 0 });
+
   const [loading, setLoading] = useState(true);
+
+  // Flash Sale countdown - lưu endTime vào sessionStorage để không reset khi chuyển trang
+  useEffect(() => {
+    const FLASH_DURATION_MS = 2 * 60 * 60 * 1000; // 2 tiếng
+    let endTime;
+
+    const saved = sessionStorage.getItem('flashSaleEnd');
+    if (saved && Number(saved) > Date.now()) {
+      endTime = Number(saved);
+    } else {
+      endTime = Date.now() + FLASH_DURATION_MS;
+      sessionStorage.setItem('flashSaleEnd', String(endTime));
+    }
+
+    const tick = () => {
+      const remaining = Math.max(0, endTime - Date.now());
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      setFlashTimer({ hours: h, minutes: m, seconds: s });
+
+      if (remaining <= 0) {
+        // Reset lại vòng mới khi hết giờ
+        const newEnd = Date.now() + FLASH_DURATION_MS;
+        sessionStorage.setItem('flashSaleEnd', String(newEnd));
+        endTime = newEnd;
+      }
+    };
+
+    tick(); // chạy ngay lập tức
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchHomeData = async () => {
@@ -150,11 +186,11 @@ const Home = () => {
                   <i className="bi bi-lightning-charge-fill text-warning"></i>{" "}
                   FLASH SALE
                 </h4>
-                {/* Giả lập đồng hồ đếm ngược */}
+                {/* Đồng hồ đếm ngược dynamic */}
                 <div className="d-flex gap-1 text-white fw-bold">
-                  <span className="bg-dark px-2 py-1 rounded small">02</span>:
-                  <span className="bg-dark px-2 py-1 rounded small">45</span>:
-                  <span className="bg-dark px-2 py-1 rounded small">30</span>
+                  <span className="bg-dark px-2 py-1 rounded small">{String(flashTimer.hours).padStart(2, '0')}</span>:
+                  <span className="bg-dark px-2 py-1 rounded small">{String(flashTimer.minutes).padStart(2, '0')}</span>:
+                  <span className="bg-dark px-2 py-1 rounded small">{String(flashTimer.seconds).padStart(2, '0')}</span>
                 </div>
               </div>
               <Link

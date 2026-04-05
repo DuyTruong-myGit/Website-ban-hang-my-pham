@@ -210,7 +210,7 @@ const Header = () => {
                     >
                       <div
                         className="d-flex align-items-center gap-2 cursor-pointer hover-opacity"
-                        onClick={() => navigate("/profile")}
+                        onClick={() => navigate("/account/profile")}
                       >
                         <i className="bi bi-person-circle fs-4"></i>
                         <div className="d-flex flex-column lh-1">
@@ -235,7 +235,7 @@ const Header = () => {
                             </>
                           )}
 
-                          <Link to="/profile" style={dropdownStyles.item} className="user-dropdown-item">
+                          <Link to="/account/profile" style={dropdownStyles.item} className="user-dropdown-item">
                             <i className="bi bi-person fs-6 text-muted"></i>
                             Tài khoản của tôi
                           </Link>

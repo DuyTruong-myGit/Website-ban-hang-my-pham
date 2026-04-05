@@ -28,6 +28,8 @@ import AdminCoupons from './pages/admin/AdminCoupons';
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ProfilePage from "./pages/ProfilePage";
+import ForgotPassword from "./pages/ForgotPassword";
 // Pages — TV2
 import Category from "./pages/Category";
 import ProductDetail from "./pages/ProductDetail";
@@ -77,34 +79,7 @@ const StaffRoute = ({ children }) => {
   return children;
 };
 
-const UserProfile = () => {
-  const { user, logout } = useAuth();
-  return (
-    <div className="container mt-5">
-      <h2 className="mb-4">Hồ sơ cá nhân</h2>
-      {user && (
-        <div className="card p-4 shadow-sm border-0">
-          <p>
-            <strong>Họ tên:</strong> {user.name}
-          </p>
-          <p>
-            <strong>Email:</strong> {user.email}
-          </p>
-          <p>
-            <strong>Số điện thoại:</strong> {user.phone || "Chưa cung cấp"}
-          </p>
-          <p>
-            <strong>Vai trò:</strong>{" "}
-            <span className="badge bg-success">{user.role}</span>
-          </p>
-          <button onClick={logout} className="btn btn-danger mt-3">
-            Đăng xuất
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
+
 
 const AppLayout = ({ children }) => {
   return (
@@ -171,11 +146,19 @@ const AppRoutes = () => {
           }
         />
         <Route
-          path="/profile"
+          path="/forgot-password"
+          element={
+            <AppLayout>
+              <ForgotPassword />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/profile"
           element={
             <AppLayout>
               <PrivateRoute>
-                <UserProfile />
+                <ProfilePage />
               </PrivateRoute>
             </AppLayout>
           }
