@@ -60,6 +60,12 @@ export const chatApi = {
         const res = await apiClient.put(`/chat/rooms/${roomId}/read`);
         return res.data;
     },
+
+    // Kiểm tra user online
+    checkOnline: async (userId) => {
+        const res = await apiClient.get(`/chat/online/${userId}`);
+        return res.data;
+    },
 };
 
 // === STAFF CHAT ===
@@ -79,6 +85,33 @@ export const staffChatApi = {
     // Tất cả phòng
     getAllRooms: async () => {
         const res = await apiClient.get('/staff/chat/all');
+        return res.data;
+    },
+};
+
+// === ADMIN CHAT ===
+export const adminChatApi = {
+    // Tất cả phòng chat
+    getAllRooms: async () => {
+        const res = await apiClient.get('/staff/chat/all');
+        return res.data;
+    },
+
+    // Xóa phòng chat
+    deleteRoom: async (roomId) => {
+        const res = await apiClient.delete(`/admin/chat/rooms/${roomId}`);
+        return res.data;
+    },
+
+    // Lấy tin nhắn trong phòng
+    getMessages: async (roomId) => {
+        const res = await apiClient.get(`/chat/rooms/${roomId}/messages`);
+        return res.data;
+    },
+
+    // Đóng phòng chat
+    closeRoom: async (roomId) => {
+        const res = await apiClient.put(`/chat/rooms/${roomId}/close`);
         return res.data;
     },
 };

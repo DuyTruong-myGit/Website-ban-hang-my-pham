@@ -33,6 +33,9 @@ const ChatPopup = () => {
     const sendMessageWS = chatContext?.sendMessageWS || (() => {});
     const sendTyping = chatContext?.sendTyping || (() => {});
     const sendMarkAsRead = chatContext?.sendMarkAsRead || (() => {});
+    const unreadCount = chatContext?.unreadCount || 0;
+    const resetUnread = chatContext?.resetUnread || (() => {});
+    const staffOnline = chatContext?.staffOnline || false;
 
     const [inputMsg, setInputMsg] = useState('');
     const [loading, setLoading] = useState(false);
@@ -46,6 +49,13 @@ const ChatPopup = () => {
     const toggleChatOpen = (val) => {
         if (token) {
             setChatOpen(val);
+            if (val) {
+                // Khi mở popup → reset unread + đánh dấu đã đọc
+                resetUnread();
+                if (currentRoom?.id) {
+                    sendMarkAsRead(currentRoom.id);
+                }
+            }
         } else {
             setLocalChatOpen(val);
         }
@@ -60,6 +70,8 @@ const ChatPopup = () => {
     useEffect(() => {
         if (isChatOpen && token) {
             loadExistingRoom();
+            // Reset unread khi mở
+            resetUnread();
         }
     }, [isChatOpen, token]);
 
@@ -70,6 +82,18 @@ const ChatPopup = () => {
             sendMarkAsRead(currentRoom.id);
         }
     }, [currentRoom?.id, connected]);
+
+    // Khi nhận tin nhắn mới và popup đang mở → đánh dấu đã đọc
+    useEffect(() => {
+        if (isChatOpen && currentRoom?.id && connected && messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            const userId = user?.id || user?._id;
+            if (lastMsg && lastMsg.senderId !== userId) {
+                sendMarkAsRead(currentRoom.id);
+                resetUnread();
+            }
+        }
+    }, [messages.length, isChatOpen]);
 
     const loadExistingRoom = async () => {
         try {
@@ -169,6 +193,17 @@ const ChatPopup = () => {
     const userId = user?.id || user?._id;
     const isRoomClosed = currentRoom?.status === 'closed';
 
+    // Xác định trạng thái staff online
+    const getStaffStatus = () => {
+        if (!token) return '🟢 Sẵn sàng hỗ trợ';
+        if (currentRoom?.status === 'active') {
+            return staffOnline ? '🟢 Đang trực tuyến' : '⚪ Ngoại tuyến';
+        }
+        if (currentRoom?.status === 'waiting') return '⏳ Đang chờ nhân viên...';
+        if (isRoomClosed) return '🔴 Đã kết thúc';
+        return '🟢 Sẵn sàng hỗ trợ';
+    };
+
     // Ẩn nút chat nếu là staff/admin (họ dùng /staff/chats)
     if (user && (user.role === 'admin' || user.role === 'staff')) {
         return null;
@@ -183,6 +218,12 @@ const ChatPopup = () => {
                 title="Chat với nhân viên tư vấn"
             >
                 <i className={`bi ${isChatOpen ? 'bi-x-lg' : 'bi-chat-dots-fill'}`}></i>
+                {/* Badge thông báo tin nhắn mới */}
+                {!isChatOpen && unreadCount > 0 && (
+                    <span className="unread-badge">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                )}
             </button>
 
             {/* Chat Popup */}
@@ -199,15 +240,7 @@ const ChatPopup = () => {
                                     {currentRoom?.staffName || 'AuraBeauty Support'}
                                 </div>
                                 <div className="staff-status">
-                                    {!token
-                                        ? '🟢 Sẵn sàng hỗ trợ'
-                                        : currentRoom?.status === 'active'
-                                            ? '🟢 Đang trực tuyến'
-                                            : currentRoom?.status === 'waiting'
-                                                ? '⏳ Đang chờ nhân viên...'
-                                                : isRoomClosed
-                                                    ? '🔴 Đã kết thúc'
-                                                    : '🟢 Sẵn sàng hỗ trợ'}
+                                    {getStaffStatus()}
                                 </div>
                             </div>
                         </div>

@@ -15,9 +15,23 @@ export const ChatProvider = ({ children }) => {
     const [messages, setMessages] = useState([]);
     const [typingUser, setTypingUser] = useState(null);
     const [chatOpen, setChatOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [staffOnline, setStaffOnline] = useState(false);
 
     const stompClientRef = useRef(null);
     const subscriptionsRef = useRef([]);
+    const notificationSubRef = useRef(null);
+    const chatOpenRef = useRef(chatOpen);
+    const currentRoomRef = useRef(currentRoom);
+
+    // Sync refs với state
+    useEffect(() => {
+        chatOpenRef.current = chatOpen;
+    }, [chatOpen]);
+
+    useEffect(() => {
+        currentRoomRef.current = currentRoom;
+    }, [currentRoom]);
 
     // ─── Kết nối WebSocket ──────────────────────────────────────────────────
 
@@ -38,6 +52,7 @@ export const ChatProvider = ({ children }) => {
             onDisconnect: () => {
                 console.log('❌ WebSocket Disconnected');
                 setConnected(false);
+                setStaffOnline(false);
             },
             onStompError: (frame) => {
                 console.error('STOMP Error:', frame.headers['message']);
@@ -54,6 +69,63 @@ export const ChatProvider = ({ children }) => {
         };
     }, [token]);
 
+    // ─── Subscribe notification channel riêng cho user ──────────────────────
+    // Đảm bảo customer luôn nhận unread update dù popup đóng hay mở
+
+    useEffect(() => {
+        const client = stompClientRef.current;
+        const userId = user?.id || user?._id;
+        if (!client || !connected || !userId) return;
+
+        // Hủy subscription cũ
+        if (notificationSubRef.current) {
+            notificationSubRef.current.unsubscribe();
+            notificationSubRef.current = null;
+        }
+
+        // Subscribe vào channel notification cá nhân
+        notificationSubRef.current = client.subscribe(
+            `/topic/user/${userId}/chat-notification`,
+            (frame) => {
+                const data = JSON.parse(frame.body);
+                // Nếu popup đang đóng → tăng unread count
+                if (!chatOpenRef.current) {
+                    setUnreadCount(data.unreadCount || 1);
+                }
+            }
+        );
+
+        return () => {
+            if (notificationSubRef.current) {
+                notificationSubRef.current.unsubscribe();
+                notificationSubRef.current = null;
+            }
+        };
+    }, [connected, user]);
+
+    // ─── Gửi offline presence trước khi trang đóng ──────────────────────────
+
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            const client = stompClientRef.current;
+            const room = currentRoomRef.current;
+            const userId = user?.id || user?._id;
+            if (client && client.connected && room?.id && userId) {
+                client.publish({
+                    destination: `/app/chat.presence/${room.id}`,
+                    body: JSON.stringify({
+                        userId,
+                        isOnline: false,
+                        role: user.role,
+                    }),
+                });
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [user]);
+
     // ─── Subscribe vào phòng chat ───────────────────────────────────────────
 
     const subscribeToRoom = useCallback((roomId) => {
@@ -68,6 +140,12 @@ export const ChatProvider = ({ children }) => {
         const msgSub = client.subscribe(`/topic/chat/${roomId}`, (frame) => {
             const newMessage = JSON.parse(frame.body);
             setMessages(prev => [...prev, newMessage]);
+
+            // Nếu popup đóng và tin nhắn không phải do mình gửi → tăng unread
+            const userId = user?.id || user?._id;
+            if (newMessage.senderId !== userId && !chatOpenRef.current) {
+                setUnreadCount(prev => prev + 1);
+            }
         });
 
         // Subscribe typing
@@ -87,12 +165,46 @@ export const ChatProvider = ({ children }) => {
             const data = JSON.parse(frame.body);
             if (data.type === 'room_assigned') {
                 setCurrentRoom(prev => prev ? { ...prev, status: 'active', staffName: data.staffName } : prev);
+                setStaffOnline(true);
             } else if (data.type === 'room_closed') {
                 setCurrentRoom(prev => prev ? { ...prev, status: 'closed' } : prev);
+                setStaffOnline(false);
             }
         });
 
-        subscriptionsRef.current = [msgSub, typingSub, statusSub];
+        // Subscribe presence (online/offline)
+        const presenceSub = client.subscribe(`/topic/chat/${roomId}/presence`, (frame) => {
+            const data = JSON.parse(frame.body);
+            if (data.role === 'staff') {
+                setStaffOnline(data.isOnline);
+            }
+        });
+
+        // Subscribe read event
+        const readSub = client.subscribe(`/topic/chat/${roomId}/read`, (frame) => {
+            // Có thể dùng để hiện tick "đã đọc" sau này
+        });
+
+        // Subscribe unread count update
+        const unreadSub = client.subscribe(`/topic/chat/${roomId}/unread`, (frame) => {
+            const data = JSON.parse(frame.body);
+            // Cập nhật unread count cho room (dùng trong StaffChat sidebar)
+            setCurrentRoom(prev => {
+                if (prev && prev.id === data.roomId) {
+                    return {
+                        ...prev,
+                        unreadCustomer: data.unreadCustomer,
+                        unreadStaff: data.unreadStaff,
+                    };
+                }
+                return prev;
+            });
+        });
+
+        subscriptionsRef.current = [msgSub, typingSub, statusSub, presenceSub, readSub, unreadSub];
+
+        // Gửi presence online cho phòng này
+        sendPresence(roomId, true);
     }, [user]);
 
     // ─── Gửi tin nhắn qua WebSocket ─────────────────────────────────────────
@@ -141,6 +253,46 @@ export const ChatProvider = ({ children }) => {
         });
     }, [user]);
 
+    // ─── Gửi presence (online/offline) ──────────────────────────────────────
+
+    const sendPresence = useCallback((roomId, isOnline) => {
+        const client = stompClientRef.current;
+        if (!client || !client.connected || !user) return;
+
+        client.publish({
+            destination: `/app/chat.presence/${roomId}`,
+            body: JSON.stringify({
+                userId: user.id || user._id,
+                isOnline,
+                role: user.role,
+            }),
+        });
+    }, [user]);
+
+    // ─── Gửi offline cho tất cả rooms trước khi logout ─────────────────────
+
+    const sendOfflineBeforeLogout = useCallback(() => {
+        const client = stompClientRef.current;
+        const room = currentRoomRef.current;
+        const userId = user?.id || user?._id;
+        if (client && client.connected && room?.id && userId) {
+            client.publish({
+                destination: `/app/chat.presence/${room.id}`,
+                body: JSON.stringify({
+                    userId,
+                    isOnline: false,
+                    role: user.role,
+                }),
+            });
+        }
+    }, [user]);
+
+    // ─── Reset unread count ─────────────────────────────────────────────────
+
+    const resetUnread = useCallback(() => {
+        setUnreadCount(0);
+    }, []);
+
     // ─── Subscribe cho staff: phòng chat mới ────────────────────────────────
 
     const subscribeToNewRooms = useCallback((callback) => {
@@ -165,11 +317,19 @@ export const ChatProvider = ({ children }) => {
             typingUser,
             chatOpen,
             setChatOpen,
+            unreadCount,
+            setUnreadCount,
+            resetUnread,
+            staffOnline,
+            setStaffOnline,
             subscribeToRoom,
             sendMessageWS,
             sendTyping,
             sendMarkAsRead,
+            sendPresence,
+            sendOfflineBeforeLogout,
             subscribeToNewRooms,
+            stompClientRef,
         }}>
             {children}
         </ChatContext.Provider>

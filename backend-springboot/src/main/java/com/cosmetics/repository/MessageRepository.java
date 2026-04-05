@@ -12,4 +12,7 @@ public interface MessageRepository extends MongoRepository<Message, String> {
 
     // Đếm tin nhắn chưa đọc trong phòng (cho 1 phía)
     long countByRoomIdAndSenderRoleNotAndIsReadFalse(String roomId, String senderRole);
+
+    // Xóa tất cả tin nhắn trong phòng
+    void deleteByRoomId(String roomId);
 }

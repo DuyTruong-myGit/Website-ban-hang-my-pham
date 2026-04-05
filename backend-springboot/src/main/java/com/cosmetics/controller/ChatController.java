@@ -3,6 +3,7 @@ package com.cosmetics.controller;
 import com.cosmetics.dto.request.CreateChatRoomRequest;
 import com.cosmetics.dto.request.SendMessageRequest;
 import com.cosmetics.dto.response.ApiResponse;
+import com.cosmetics.config.WebSocketEventListener;
 import com.cosmetics.model.ChatRoom;
 import com.cosmetics.model.Message;
 import com.cosmetics.security.CustomUserDetails;
@@ -13,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST Controller quản lý Chat — TV4
@@ -35,6 +37,9 @@ public class ChatController {
 
     @Autowired
     private ChatService chatService;
+
+    @Autowired(required = false)
+    private WebSocketEventListener webSocketEventListener;
 
     // ── Customer: Tạo phòng chat ────────────────────────────────────────────
 
@@ -137,5 +142,21 @@ public class ChatController {
     public ApiResponse<List<ChatRoom>> getAllRooms() {
         List<ChatRoom> rooms = chatService.getAllRooms();
         return ApiResponse.success(rooms);
+    }
+
+    // ── Admin: Xóa phòng chat ───────────────────────────────────────────────
+
+    @DeleteMapping("/admin/chat/rooms/{id}")
+    public ApiResponse<Void> deleteRoom(@PathVariable String id) {
+        chatService.deleteRoom(id);
+        return ApiResponse.success(null, "Đã xóa phòng chat.");
+    }
+
+    // ── Kiểm tra user đang online ────────────────────────────────────────────
+
+    @GetMapping("/chat/online/{userId}")
+    public ApiResponse<Map<String, Object>> isUserOnline(@PathVariable String userId) {
+        boolean isOnline = webSocketEventListener != null && webSocketEventListener.isUserOnline(userId);
+        return ApiResponse.success(Map.of("userId", userId, "isOnline", isOnline));
     }
 }

@@ -45,6 +45,11 @@ import StaffDashboard from "./pages/staff/StaffDashboard";
 import StaffOrders from "./pages/staff/StaffOrders";
 // Pages — TV4
 import StaffChat from "./pages/staff/StaffChat";
+import AdminChats from "./pages/admin/AdminChats";
+import AdminReviews from "./pages/admin/AdminReviews";
+import StaffQuestions from "./pages/staff/StaffQuestions";
+import WishlistPage from "./pages/WishlistPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 // Private Route Wrapper
 const PrivateRoute = ({ children }) => {
@@ -213,6 +218,26 @@ const AppRoutes = () => {
             </AppLayout>
           }
         />
+        <Route
+          path="/account/wishlist"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <WishlistPage />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/account/notifications"
+          element={
+            <AppLayout>
+              <PrivateRoute>
+                <NotificationsPage />
+              </PrivateRoute>
+            </AppLayout>
+          }
+        />
 
         {/* === Admin Pages — TV5 (dùng AdminLayout riêng, không Header/Footer) === */}
         <Route
@@ -295,6 +320,22 @@ const AppRoutes = () => {
             </AdminRoute>
           }
         />
+        <Route
+          path="/admin/chats"
+          element={
+            <AdminRoute>
+              <AdminChats />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/reviews"
+          element={
+            <AdminRoute>
+              <AdminReviews />
+            </AdminRoute>
+          }
+        />
 
         {/* === Staff Pages — TV5 (dùng AdminLayout riêng) === */}
         <Route
@@ -320,6 +361,14 @@ const AppRoutes = () => {
           element={
             <StaffRoute>
               <StaffChat />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/questions"
+          element={
+            <StaffRoute>
+              <StaffQuestions />
             </StaffRoute>
           }
         />
