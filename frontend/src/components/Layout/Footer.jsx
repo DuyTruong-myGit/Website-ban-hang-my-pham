@@ -43,7 +43,7 @@ const Footer = () => {
                 </Row>
                 <hr className="my-4" />
                 <div className="text-center text-muted small">
-                    © 2026 HASAKI CLONE Project - Designed with Antigravity AI
+                    © 2026 HASAKI CLONE Project - Designed with "We are family company"
                 </div>
             </Container>
         </footer>

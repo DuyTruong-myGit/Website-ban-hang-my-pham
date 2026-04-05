@@ -37,13 +37,13 @@ const AdminProducts = () => {
     brandId: "",
     basePrice: 0,
     salePrice: 0,
+    stock: 0,
     images: [],
     shortDescription: "",
     description: "",
     tags: "", // tags để dạng string cách nhau dấu phẩy cho dễ nhập
     attributes: [], // Mảng động [{key: "", value: ""}]
-    variants: [], // Mảng động [{sku: "", name: "", price: 0, salePrice: 0}]
-    inStock: true,
+    variants: [], // Mảng động [{sku: "", name: "", price: 0, salePrice: 0, stock: 0}]
     isActive: true,
     isFeatured: false,
     isBestSeller: false,
@@ -121,7 +121,7 @@ const AdminProducts = () => {
       ...formData,
       variants: [
         ...formData.variants,
-        { sku: "", name: "", price: 0, salePrice: 0 },
+        { sku: "", name: "", price: 0, salePrice: 0, stock: 0 },
       ],
     });
   };
@@ -133,7 +133,7 @@ const AdminProducts = () => {
   const handleVariantChange = (index, field, val) => {
     const newVar = [...formData.variants];
     newVar[index][field] =
-      field.includes("price") || field.includes("salePrice")
+      field.includes("price") || field.includes("salePrice") || field === "stock"
         ? Number(val)
         : val;
     setFormData({ ...formData, variants: newVar });
@@ -212,13 +212,13 @@ const AdminProducts = () => {
       brandId: "",
       basePrice: 0,
       salePrice: 0,
+      stock: 0,
       images: [],
       shortDescription: "",
       description: "",
       tags: "",
       attributes: [],
       variants: [],
-      inStock: true,
       isActive: true,
       isFeatured: false,
       isBestSeller: false,
@@ -304,14 +304,30 @@ const AdminProducts = () => {
         brands.find((b) => b.id === row.brandId)?.name || row.brandId,
     },
     {
+      header: "Tồn kho",
+      render: (row) => {
+        const stock = row.stock != null ? row.stock : 0;
+        const isLow = stock > 0 && stock <= 5;
+        return (
+          <div className="d-flex flex-column gap-1">
+            <span
+              className={`admin-badge admin-badge-${stock > 0 ? (isLow ? 'warning' : 'success') : 'danger'} text-center fw-bold`}
+            >
+              {stock > 0 ? stock : 'Hết hàng'}
+            </span>
+            {isLow && (
+              <span className="text-danger small fw-medium text-center">
+                <i className="bi bi-exclamation-triangle me-1"></i>Sắp hết
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       header: "Trạng thái",
       render: (row) => (
         <div className="d-flex flex-column gap-1">
-          <span
-            className={`admin-badge admin-badge-${row.inStock ? "success" : "danger"} text-center`}
-          >
-            {row.inStock ? "Còn hàng" : "Hết hàng"}
-          </span>
           {!row.isActive && (
             <span className="admin-badge admin-badge-secondary text-center">
               Đang ẩn
@@ -582,7 +598,7 @@ const AdminProducts = () => {
               3. Giá mặc định & Hình ảnh
             </h6>
             <div className="row">
-              <div className="col-6 mb-3">
+              <div className="col-4 mb-3">
                 <label className="form-label small fw-medium">
                   Giá gốc chung (VNĐ) <span className="text-danger">*</span>
                 </label>
@@ -598,7 +614,7 @@ const AdminProducts = () => {
                   }
                 />
               </div>
-              <div className="col-6 mb-3">
+              <div className="col-4 mb-3">
                 <label className="form-label small fw-medium">
                   Giá Sale chung
                 </label>
@@ -610,6 +626,22 @@ const AdminProducts = () => {
                     setFormData({
                       ...formData,
                       salePrice: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div className="col-4 mb-3">
+                <label className="form-label small fw-medium">
+                  Tồn kho chung <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="number"
+                  className="form-control fw-bold"
+                  value={formData.stock}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      stock: Number(e.target.value),
                     })
                   }
                 />
@@ -655,7 +687,7 @@ const AdminProducts = () => {
                     </button>
                   </div>
                   <div className="row g-2 mb-2">
-                    <div className="col-6">
+                    <div className="col-4">
                       <input
                         type="text"
                         className="form-control form-control-sm"
@@ -666,7 +698,7 @@ const AdminProducts = () => {
                         }
                       />
                     </div>
-                    <div className="col-6">
+                    <div className="col-8">
                       <input
                         type="text"
                         className="form-control form-control-sm"
@@ -679,7 +711,7 @@ const AdminProducts = () => {
                     </div>
                   </div>
                   <div className="row g-2">
-                    <div className="col-6">
+                    <div className="col-4">
                       <input
                         type="number"
                         className="form-control form-control-sm"
@@ -690,7 +722,7 @@ const AdminProducts = () => {
                         }
                       />
                     </div>
-                    <div className="col-6">
+                    <div className="col-4">
                       <input
                         type="number"
                         className="form-control form-control-sm text-danger fw-bold"
@@ -700,6 +732,21 @@ const AdminProducts = () => {
                           handleVariantChange(
                             index,
                             "salePrice",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="col-4">
+                      <input
+                        type="number"
+                        className="form-control form-control-sm fw-bold"
+                        placeholder="Tồn kho"
+                        value={v.stock}
+                        onChange={(e) =>
+                          handleVariantChange(
+                            index,
+                            "stock",
                             e.target.value,
                           )
                         }
@@ -729,19 +776,6 @@ const AdminProducts = () => {
               />
               <label className="form-check-label small">
                 Hiển thị trên website
-              </label>
-            </div>
-            <div className="form-check form-switch mb-2">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                checked={formData.inStock}
-                onChange={(e) =>
-                  setFormData({ ...formData, inStock: e.target.checked })
-                }
-              />
-              <label className="form-check-label small">
-                Còn hàng (In Stock)
               </label>
             </div>
             <div className="form-check form-switch mb-2">

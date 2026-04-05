@@ -17,31 +17,7 @@ const handleResponse = async (response) => {
     return response.json();
 };
 
-// === INVENTORY ===
-export const inventoryApi = {
-    getAll: async (page = 0, limit = 20) => {
-        const res = await fetch(`${API_BASE}/admin/inventory?page=${page}&limit=${limit}`, {
-            headers: getAuthHeaders()
-        });
-        return handleResponse(res);
-    },
 
-    update: async (id, data) => {
-        const res = await fetch(`${API_BASE}/admin/inventory/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify(data)
-        });
-        return handleResponse(res);
-    },
-
-    getLowStock: async () => {
-        const res = await fetch(`${API_BASE}/admin/inventory/low-stock`, {
-            headers: getAuthHeaders()
-        });
-        return handleResponse(res);
-    }
-};
 
 // === REPORTS ===
 export const reportApi = {

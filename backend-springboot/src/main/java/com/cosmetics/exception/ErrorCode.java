@@ -20,6 +20,8 @@ public enum ErrorCode {
     // Product Errors
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "Sản phẩm không tồn tại."),
     PRODUCT_INACTIVE(HttpStatus.BAD_REQUEST, "Sản phẩm hiện không còn kinh doanh."),
+    PRODUCT_OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "Sản phẩm đã hết hàng."),
+    INSUFFICIENT_STOCK(HttpStatus.BAD_REQUEST, "Số lượng yêu cầu vượt quá tồn kho."),
 
     // Cart Errors — TV3
     CART_NOT_FOUND(HttpStatus.NOT_FOUND, "Giỏ hàng không tồn tại."),

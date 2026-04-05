@@ -68,10 +68,10 @@ public class ReportService {
         // SP hết hàng
         try {
             Aggregation lowStockAgg = Aggregation.newAggregation(
-                    Aggregation.match(Criteria.where("quantity").lte(5)),
+                    Aggregation.match(Criteria.where("stock").lte(5).and("is_active").is(true)),
                     Aggregation.count().as("count")
             );
-            AggregationResults<Map> lowStockResult = mongoTemplate.aggregate(lowStockAgg, "inventories", Map.class);
+            AggregationResults<Map> lowStockResult = mongoTemplate.aggregate(lowStockAgg, "products", Map.class);
             Map lowStockMap = lowStockResult.getUniqueMappedResult();
             overview.put("lowStockProducts", lowStockMap != null ? lowStockMap.get("count") : 0);
         } catch (Exception e) {
@@ -96,6 +96,10 @@ public class ReportService {
                 Aggregation.group("year", "month", "day")
                         .sum("total").as("revenue")
                         .count().as("orderCount"),
+                Aggregation.project("revenue", "orderCount")
+                        .and("_id.year").as("year")
+                        .and("_id.month").as("month")
+                        .and("_id.day").as("day"),
                 Aggregation.sort(org.springframework.data.domain.Sort.Direction.ASC, "year", "month", "day")
         );
 
@@ -134,17 +138,21 @@ public class ReportService {
     }
 
     /**
-     * Danh sách SP sắp hết hàng (quantity <= low_stock_threshold)
+     * Danh sách SP sắp hết hàng (stock <= 5)
      */
     public List<Map> getLowStockList() {
         Aggregation aggregation = Aggregation.newAggregation(
-                Aggregation.match(Criteria.where("quantity").lte(5)),
-                Aggregation.sort(org.springframework.data.domain.Sort.Direction.ASC, "quantity"),
+                Aggregation.match(Criteria.where("stock").lte(5).and("is_active").is(true)),
+                Aggregation.sort(org.springframework.data.domain.Sort.Direction.ASC, "stock"),
                 Aggregation.limit(20),
-                Aggregation.project("product_id", "variant_sku", "quantity", "reserved", "warehouse", "low_stock_threshold")
+                Aggregation.project("name")
+                        .and("_id").as("product_id")
+                        .and("sku").as("variant_sku")
+                        .and("stock").as("quantity")
+                        .andExpression("5").as("low_stock_threshold")
         );
 
-        AggregationResults<Map> results = mongoTemplate.aggregate(aggregation, "inventories", Map.class);
+        AggregationResults<Map> results = mongoTemplate.aggregate(aggregation, "products", Map.class);
         return results.getMappedResults();
     }
 }

@@ -87,6 +87,9 @@ public class Product {
     @Builder.Default
     private Boolean isBestSeller = false;
 
+    @Builder.Default
+    private Integer stock = 0;
+
     @Field("in_stock")
     @Builder.Default
     private Boolean inStock = true;
@@ -102,6 +105,7 @@ public class Product {
     // --- Embedded Classes ---
     
     @Data
+    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Variant {
@@ -111,6 +115,8 @@ public class Product {
         private Double price;
         @Field("sale_price")
         private Double salePrice;
+        @Builder.Default
+        private Integer stock = 0;
         private List<String> images;
     }
 

@@ -10,8 +10,10 @@ import com.cosmetics.model.Order;
 import com.cosmetics.model.Order.OrderItem;
 import com.cosmetics.model.Order.ShippingAddress;
 import com.cosmetics.model.Order.StatusHistory;
+import com.cosmetics.model.Product;
 import com.cosmetics.repository.CartRepository;
 import com.cosmetics.repository.OrderRepository;
+import com.cosmetics.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,9 +32,9 @@ import java.util.Set;
  * Service xử lý logic đơn hàng — TV3
  *
  * Luồng chính:
- *  1. User checkout → lấy items từ Cart → tạo Order → xóa Cart
+ *  1. User checkout → lấy items từ Cart → kiểm tra tồn kho → tạo Order → trừ stock → xóa Cart
  *  2. Admin/Staff cập nhật trạng thái → ghi StatusHistory
- *  3. User chỉ có thể hủy đơn khi đang ở trạng thái 'pending'
+ *  3. User chỉ có thể hủy đơn khi đang ở trạng thái 'pending' → cộng lại stock
  */
 @Service
 public class OrderService {
@@ -53,6 +55,9 @@ public class OrderService {
     private CartRepository cartRepository;
 
     @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
     private CouponService couponService;
 
     @Autowired
@@ -64,7 +69,7 @@ public class OrderService {
 
     /**
      * Tạo đơn hàng mới từ giỏ hàng hiện tại của user.
-     * Sau khi tạo thành công, giỏ hàng sẽ bị xóa.
+     * Kiểm tra tồn kho → trừ stock → tạo đơn → xóa giỏ hàng.
      */
     public Order createOrder(String userId, CreateOrderRequest request) {
         // 1. Lấy giỏ hàng
@@ -75,7 +80,21 @@ public class OrderService {
             throw new AppException(ErrorCode.CART_EMPTY);
         }
 
-        // 2. Chuyển CartItem → OrderItem và tính tổng
+        // 2. Kiểm tra tồn kho cho TẤT CẢ items trước khi xử lý
+        for (Cart.CartItem cartItem : cart.getItems()) {
+            Product product = productRepository.findById(cartItem.getProductId())
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+
+            String variantSku = cartItem.getVariantSku() != null ? cartItem.getVariantSku() : "";
+            int availableStock = getAvailableStock(product, variantSku);
+
+            if (availableStock < cartItem.getQuantity()) {
+                throw new AppException(ErrorCode.INSUFFICIENT_STOCK,
+                        "Sản phẩm \"" + cartItem.getName() + "\" chỉ còn " + availableStock + " trong kho.");
+            }
+        }
+
+        // 3. Chuyển CartItem → OrderItem và tính tổng
         List<OrderItem> orderItems = new ArrayList<>();
         double subtotal = 0.0;
 
@@ -95,10 +114,10 @@ public class OrderService {
                     .build());
         }
 
-        // 3. Tính phí ship
+        // 4. Tính phí ship
         double shippingFee = subtotal >= SHIPPING_THRESHOLD ? 0.0 : SHIPPING_FEE;
 
-        // 4. Xây dựng ShippingAddress
+        // 5. Xây dựng ShippingAddress
         ShippingAddress shippingAddress = ShippingAddress.builder()
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
@@ -108,7 +127,7 @@ public class OrderService {
                 .street(request.getStreet())
                 .build();
 
-        // 5. Tạo StatusHistory ban đầu
+        // 6. Tạo StatusHistory ban đầu
         List<StatusHistory> statusHistory = new ArrayList<>();
         statusHistory.add(StatusHistory.builder()
                 .status("pending")
@@ -117,7 +136,7 @@ public class OrderService {
                 .changedAt(LocalDateTime.now())
                 .build());
 
-        // 6. Xử lý coupon nếu có
+        // 7. Xử lý coupon nếu có
         double discount = 0.0;
         String couponCodeUsed = null;
         if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
@@ -129,14 +148,13 @@ public class OrderService {
                 discount = ((Number) couponResult.get("discountAmount")).doubleValue();
                 couponCodeUsed = request.getCouponCode().trim().toUpperCase();
             } catch (AppException e) {
-                // Nếu coupon không hợp lệ, bỏ qua (không fail đơn hàng)
                 discount = 0.0;
             }
         }
 
         double total = subtotal + shippingFee - discount;
 
-        // 7. Tạo đơn hàng
+        // 8. Tạo đơn hàng
         Order order = Order.builder()
                 .orderCode(generateOrderCode())
                 .userId(userId)
@@ -155,15 +173,18 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 8. Tăng usedCount của coupon
+        // 9. TRỪ TỒN KHO sau khi tạo đơn thành công
+        deductStock(cart.getItems());
+
+        // 10. Tăng usedCount của coupon
         if (couponCodeUsed != null) {
             couponService.applyCoupon(couponCodeUsed);
         }
 
-        // 9. Tạo bản ghi thanh toán
+        // 11. Tạo bản ghi thanh toán
         paymentService.createPaymentRecord(savedOrder);
 
-        // 10. Xóa giỏ hàng sau khi đặt hàng thành công
+        // 12. Xóa giỏ hàng sau khi đặt hàng thành công
         cartRepository.deleteByUserId(userId);
 
         return savedOrder;
@@ -191,6 +212,7 @@ public class OrderService {
     /**
      * User hủy đơn hàng của mình.
      * Chỉ được hủy khi đơn đang ở trạng thái 'pending'.
+     * Tự động cộng lại tồn kho.
      */
     public Order cancelMyOrder(String userId, String orderId) {
         Order order = orderRepository.findByIdAndUserId(orderId, userId)
@@ -199,6 +221,9 @@ public class OrderService {
         if (!CANCELLABLE_STATUSES.contains(order.getStatus())) {
             throw new AppException(ErrorCode.ORDER_CANNOT_CANCEL);
         }
+
+        // Cộng lại tồn kho
+        restoreStock(order.getItems());
 
         return updateStatus(order, "cancelled", "Khách hàng hủy đơn", userId);
     }
@@ -225,11 +250,117 @@ public class OrderService {
             throw new AppException(ErrorCode.ORDER_INVALID_STATUS);
         }
 
+        // Nếu chuyển sang cancelled → cộng lại tồn kho (chỉ khi đơn chưa bị cancelled trước đó)
+        if ("cancelled".equals(request.getStatus()) && !"cancelled".equals(order.getStatus())) {
+            restoreStock(order.getItems());
+        }
+
         if (request.getTrackingCode() != null && !request.getTrackingCode().isBlank()) {
             order.setTrackingCode(request.getTrackingCode());
         }
 
         return updateStatus(order, request.getStatus(), request.getNote(), staffId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // INVENTORY HELPER METHODS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Trừ tồn kho cho các sản phẩm trong đơn hàng.
+     * Cập nhật stock, soldCount, và inStock trên DB.
+     */
+    private void deductStock(List<Cart.CartItem> items) {
+        for (Cart.CartItem item : items) {
+            Product product = productRepository.findById(item.getProductId()).orElse(null);
+            if (product == null) continue;
+
+            String variantSku = item.getVariantSku() != null ? item.getVariantSku() : "";
+
+            if (!variantSku.isEmpty() && product.getVariants() != null) {
+                // Trừ stock của variant
+                for (Product.Variant variant : product.getVariants()) {
+                    if (variantSku.equals(variant.getSku())) {
+                        int newStock = Math.max(0, (variant.getStock() != null ? variant.getStock() : 0) - item.getQuantity());
+                        variant.setStock(newStock);
+                        break;
+                    }
+                }
+            } else {
+                // Trừ stock chung của product
+                int newStock = Math.max(0, (product.getStock() != null ? product.getStock() : 0) - item.getQuantity());
+                product.setStock(newStock);
+            }
+
+            // Tăng soldCount
+            product.setSoldCount((product.getSoldCount() != null ? product.getSoldCount() : 0) + item.getQuantity());
+
+            // Cập nhật inStock tự động
+            product.setInStock(computeInStock(product));
+
+            productRepository.save(product);
+        }
+    }
+
+    /**
+     * Cộng lại tồn kho khi đơn hàng bị hủy.
+     */
+    private void restoreStock(List<OrderItem> items) {
+        for (OrderItem item : items) {
+            Product product = productRepository.findById(item.getProductId()).orElse(null);
+            if (product == null) continue;
+
+            String variantSku = item.getVariantSku() != null ? item.getVariantSku() : "";
+
+            if (!variantSku.isEmpty() && product.getVariants() != null) {
+                for (Product.Variant variant : product.getVariants()) {
+                    if (variantSku.equals(variant.getSku())) {
+                        int newStock = (variant.getStock() != null ? variant.getStock() : 0) + item.getQuantity();
+                        variant.setStock(newStock);
+                        break;
+                    }
+                }
+            } else {
+                int newStock = (product.getStock() != null ? product.getStock() : 0) + item.getQuantity();
+                product.setStock(newStock);
+            }
+
+            // Giảm soldCount
+            product.setSoldCount(Math.max(0, (product.getSoldCount() != null ? product.getSoldCount() : 0) - item.getQuantity()));
+
+            // Cập nhật inStock tự động
+            product.setInStock(computeInStock(product));
+
+            productRepository.save(product);
+        }
+    }
+
+    /**
+     * Lấy stock khả dụng cho 1 sản phẩm (có xét variant).
+     */
+    private int getAvailableStock(Product product, String variantSku) {
+        if (variantSku != null && !variantSku.isEmpty() && product.getVariants() != null) {
+            for (Product.Variant variant : product.getVariants()) {
+                if (variantSku.equals(variant.getSku())) {
+                    return variant.getStock() != null ? variant.getStock() : 0;
+                }
+            }
+        }
+        return product.getStock() != null ? product.getStock() : 0;
+    }
+
+    /**
+     * Tính toán trạng thái inStock dựa trên stock hiện tại.
+     * Product còn hàng nếu:
+     * - Không có variant: stock > 0
+     * - Có variant: ít nhất 1 variant có stock > 0
+     */
+    private boolean computeInStock(Product product) {
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            return product.getVariants().stream()
+                    .anyMatch(v -> v.getStock() != null && v.getStock() > 0);
+        }
+        return product.getStock() != null && product.getStock() > 0;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

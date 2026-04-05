@@ -52,6 +52,7 @@ public class CartService {
     /**
      * Thêm sản phẩm vào giỏ hàng.
      * Nếu item đã tồn tại (cùng productId + variantSku) → cộng dồn quantity.
+     * Kiểm tra tồn kho trước khi thêm.
      */
     public Cart addItem(String userId, CartRequest request) {
         // 1. Tìm sản phẩm để lấy thông tin snapshot
@@ -70,37 +71,58 @@ public class CartService {
         // 3. Xây dựng thông tin variant (nếu có)
         String variantSku = request.getVariantSku() != null ? request.getVariantSku().trim() : "";
         String variantName = resolveVariantName(product, variantSku);
+        Product.Variant matchedVariant = null;
 
         // Nếu sản phẩm HAS variants nhưng request không truyền variantSku → lấy variant đầu tiên
         if (variantSku.isEmpty() && product.getVariants() != null && !product.getVariants().isEmpty()) {
             Product.Variant firstVariant = product.getVariants().get(0);
             variantSku = firstVariant.getSku() != null ? firstVariant.getSku() : "";
             variantName = firstVariant.getName();
+            matchedVariant = firstVariant;
             if (firstVariant.getSalePrice() != null && firstVariant.getSalePrice() > 0) {
                 price = firstVariant.getSalePrice();
             } else if (firstVariant.getPrice() != null) {
                 price = firstVariant.getPrice();
             }
+        } else if (!variantSku.isEmpty() && product.getVariants() != null) {
+            final String skuToFind = variantSku;
+            matchedVariant = product.getVariants().stream()
+                    .filter(v -> skuToFind.equals(v.getSku()))
+                    .findFirst().orElse(null);
         }
 
-        // 4. Lấy hoặc tạo mới Cart document
+        // 4. Kiểm tra tồn kho
+        int availableStock = getAvailableStock(product, matchedVariant);
+        if (availableStock <= 0) {
+            throw new AppException(ErrorCode.PRODUCT_OUT_OF_STOCK);
+        }
+
+        // 5. Lấy hoặc tạo mới Cart document
         Cart cart = cartRepository.findByUserId(userId)
                 .orElse(Cart.builder().userId(userId).items(new ArrayList<>()).build());
 
         List<CartItem> items = new ArrayList<>(cart.getItems());
 
-        // 5. Kiểm tra xem item đã có trong giỏ chưa (cùng productId + variantSku)
+        // 6. Kiểm tra xem item đã có trong giỏ chưa (cùng productId + variantSku)
         final String finalVariantSku = variantSku;
         Optional<CartItem> existing = items.stream()
                 .filter(i -> i.getProductId().equals(request.getProductId())
                         && i.getVariantSku().equals(finalVariantSku))
                 .findFirst();
 
+        int currentQtyInCart = existing.map(CartItem::getQuantity).orElse(0);
+        int totalQtyAfterAdd = currentQtyInCart + request.getQuantity();
+
+        // Kiểm tra tổng quantity sau khi thêm có vượt stock không
+        if (totalQtyAfterAdd > availableStock) {
+            throw new AppException(ErrorCode.INSUFFICIENT_STOCK,
+                    "Tồn kho chỉ còn " + availableStock + " sản phẩm" +
+                    (currentQtyInCart > 0 ? " (đã có " + currentQtyInCart + " trong giỏ)" : ""));
+        }
+
         if (existing.isPresent()) {
-            // Nếu đã có → cộng dồn số lượng
-            existing.get().setQuantity(existing.get().getQuantity() + request.getQuantity());
+            existing.get().setQuantity(totalQtyAfterAdd);
         } else {
-            // Nếu chưa có → tạo CartItem mới
             String imageUrl = (product.getImages() != null && !product.getImages().isEmpty())
                     ? product.getImages().get(0) : "";
 
@@ -128,12 +150,30 @@ public class CartService {
     /**
      * Cập nhật số lượng của 1 item theo productId (và variantSku nếu có).
      * Nếu quantity = 0 → tự động xóa item đó khỏi giỏ.
+     * Kiểm tra tồn kho trước khi cập nhật.
      */
     public Cart updateItem(String userId, String productId, CartRequest request) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
 
         String variantSku = request.getVariantSku() != null ? request.getVariantSku().trim() : "";
+
+        // Kiểm tra tồn kho nếu đang tăng số lượng
+        if (request.getQuantity() > 0) {
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+            Product.Variant matchedVariant = null;
+            if (!variantSku.isEmpty() && product.getVariants() != null) {
+                matchedVariant = product.getVariants().stream()
+                        .filter(v -> variantSku.equals(v.getSku()))
+                        .findFirst().orElse(null);
+            }
+            int availableStock = getAvailableStock(product, matchedVariant);
+            if (request.getQuantity() > availableStock) {
+                throw new AppException(ErrorCode.INSUFFICIENT_STOCK,
+                        "Tồn kho chỉ còn " + availableStock + " sản phẩm.");
+            }
+        }
 
         List<CartItem> items = new ArrayList<>(cart.getItems());
         boolean found = false;
@@ -209,5 +249,18 @@ public class CartService {
                 .map(Product.Variant::getName)
                 .findFirst()
                 .orElse("");
+    }
+
+    /**
+     * Lấy số lượng tồn kho khả dụng.
+     * Nếu sản phẩm có variant → lấy stock của variant.
+     * Nếu không có variant → lấy stock của product.
+     * Xử lý null-safe (null = 0).
+     */
+    private int getAvailableStock(Product product, Product.Variant variant) {
+        if (variant != null && variant.getStock() != null) {
+            return variant.getStock();
+        }
+        return product.getStock() != null ? product.getStock() : 0;
     }
 }
