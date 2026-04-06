@@ -12,7 +12,7 @@ import './StaffChat.css';
 const StaffChat = () => {
     const { user } = useAuth();
     const {
-        connected,
+        connected,abc
         messages,
         setMessages,
         typingUser,
@@ -266,12 +266,6 @@ const StaffChat = () => {
         }
     };
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
 
     // ─── Lấy rooms theo tab hiện tại ─────────────────────────────────────────
 
