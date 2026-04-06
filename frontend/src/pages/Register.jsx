@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Form, Button, Card, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Register = () => {
+    usePageTitle('Đăng Ký');
     const [formData, setFormData] = useState({
         name: '',
         email: '',

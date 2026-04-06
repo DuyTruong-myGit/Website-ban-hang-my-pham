@@ -5,6 +5,7 @@ import DataTable from '../../components/admin/DataTable';
 import Loading from '../../components/common/Loading';
 import Pagination from '../../components/common/Pagination';
 import { useAuth } from '../../context/AuthContext';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const formatVND = (n) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);

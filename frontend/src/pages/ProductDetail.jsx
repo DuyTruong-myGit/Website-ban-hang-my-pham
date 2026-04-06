@@ -22,6 +22,7 @@ import QuestionForm from "../components/review/QuestionForm";
 import { productApi, brandApi } from "../services/customerService";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import usePageTitle from "../hooks/usePageTitle";
 import { wishlistApi } from "../services/wishlistService";
 
 const ProductDetail = () => {
@@ -33,6 +34,7 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
+  usePageTitle(product?.name || 'Chi tiết sản phẩm');
 
   const [mainImage, setMainImage] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(null);

@@ -7,9 +7,11 @@ import ChatBubble from '../../components/chat/ChatBubble';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { chatApi, staffChatApi } from '../../services/chatService';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import './StaffChat.css';
 
 const StaffChat = () => {
+    usePageTitle('Chăm Sóc Khách Hàng');
     const { user } = useAuth();
     const {
         connected,

@@ -3,8 +3,10 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import StatsCard from '../../components/admin/StatsCard';
 import Loading from '../../components/common/Loading';
 import { reportApi } from '../../services/adminService';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const StaffDashboard = () => {
+    usePageTitle('Trang Staff');
     const [overview, setOverview] = useState(null);
     const [loading, setLoading] = useState(true);
 

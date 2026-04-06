@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { orderApi } from '../services/orderService';
+import usePageTitle from '../hooks/usePageTitle';
 import './Orders.css';
 
 const formatVND = (n) =>
@@ -35,6 +36,7 @@ const StatusBadge = ({ status }) => {
 };
 
 export default function Orders() {
+    usePageTitle('Đơn Hàng Của Tôi');
     const { token } = useAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
