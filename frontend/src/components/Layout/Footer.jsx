@@ -7,9 +7,9 @@ const Footer = () => {
             <Container>
                 <Row>
                     <Col md={3}>
-                        <h6 className="fw-bold mb-3">Về HASAKI.VN</h6>
-                        <ul className="list-unstyled text-muted" style={{fontSize: '14px'}}>
-                            <li className="mb-2">Giới thiệu Hasaki</li>
+                        <h6 className="fw-bold mb-3">Về AuraBeauty.VN</h6>
+                        <ul className="list-unstyled text-muted" style={{ fontSize: '14px' }}>
+                            <li className="mb-2">Giới thiệu AuraBeauty</li>
                             <li className="mb-2">Hệ thống cửa hàng</li>
                             <li className="mb-2">Điều khoản sử dụng</li>
                             <li className="mb-2">Chính sách bảo mật</li>
@@ -17,7 +17,7 @@ const Footer = () => {
                     </Col>
                     <Col md={3}>
                         <h6 className="fw-bold mb-3">HỖ TRỢ KHÁCH HÀNG</h6>
-                        <ul className="list-unstyled text-muted" style={{fontSize: '14px'}}>
+                        <ul className="list-unstyled text-muted" style={{ fontSize: '14px' }}>
                             <li className="mb-2">Tra cứu đơn hàng</li>
                             <li className="mb-2">Chính sách đổi trả</li>
                             <li className="mb-2">Câu hỏi thường gặp</li>
@@ -26,7 +26,7 @@ const Footer = () => {
                     </Col>
                     <Col md={3}>
                         <h6 className="fw-bold mb-3">DANH MỤC NỔI BẬT</h6>
-                        <ul className="list-unstyled text-muted" style={{fontSize: '14px'}}>
+                        <ul className="list-unstyled text-muted" style={{ fontSize: '14px' }}>
                             <li className="mb-2">Tẩy trang</li>
                             <li className="mb-2">Sữa rửa mặt</li>
                             <li className="mb-2">Kem chống nắng</li>
@@ -43,7 +43,7 @@ const Footer = () => {
                 </Row>
                 <hr className="my-4" />
                 <div className="text-center text-muted small">
-                    © 2026 HASAKI CLONE Project - Designed with "We are family company"
+                    © 2026 AuraBeauty CLONE Project - Designed with "We are family company"
                 </div>
             </Container>
         </footer>
