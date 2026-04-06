@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Nav } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import usePageTitle from '../hooks/usePageTitle';
 
 const ProfilePage = () => {
+    usePageTitle('Hồ Sơ Cá Nhân');
     const { user, logout, authAxios } = useAuth();
     const [activeTab, setActiveTab] = useState('info');
 

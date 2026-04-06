@@ -4,8 +4,10 @@ import { Container, Breadcrumb, Button, Badge, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { notificationApi } from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
+import usePageTitle from '../hooks/usePageTitle';
 
 const NotificationsPage = () => {
+    usePageTitle('Thông Báo');
     const { token } = useAuth();
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState([]);

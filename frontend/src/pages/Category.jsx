@@ -4,10 +4,12 @@ import { useParams, Link } from "react-router-dom";
 import ProductGrid from "../components/common/ProductGrid";
 import Loading from "../components/common/Loading";
 import Pagination from "../components/common/Pagination";
+import usePageTitle from "../hooks/usePageTitle";
 import { productApi, categoryApi, brandApi } from "../services/customerService";
 
 const Category = () => {
   const { slug } = useParams();
+  // Sẽ gọi usePageTitle bên dưới khi có tên danh mục
 
   const [category, setCategory] = useState(null);
   const [products, setProducts] = useState([]);

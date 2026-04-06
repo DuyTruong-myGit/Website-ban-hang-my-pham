@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import usePageTitle from '../hooks/usePageTitle';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 const ForgotPassword = () => {
+    usePageTitle('Quên Mật Khẩu');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [newPassword, setNewPassword] = useState('');

@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext, useRef, useCallb
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client/dist/sockjs';
 import { useAuth } from './AuthContext';
+import { API_BASE_URL, WS_URL } from '../config/apiConfig';
 
 export const ChatContext = createContext();
 export const useChat = () => useContext(ChatContext);

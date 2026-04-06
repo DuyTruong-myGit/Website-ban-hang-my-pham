@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderApi } from '../services/orderService';
+import usePageTitle from '../hooks/usePageTitle';
 import './Checkout.css';
 
 const formatVND = (n) =>
@@ -13,6 +14,7 @@ const SHIPPING_THRESHOLD = 500000;
 const SHIPPING_FEE = 30000;
 
 export default function Checkout() {
+    usePageTitle('Thanh Toán');
     const navigate = useNavigate();
     const location = useLocation();
     const { token, user } = useAuth();

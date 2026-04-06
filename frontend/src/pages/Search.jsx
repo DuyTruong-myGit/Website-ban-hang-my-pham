@@ -4,11 +4,13 @@ import { useSearchParams, Link } from "react-router-dom";
 import ProductGrid from "../components/common/ProductGrid";
 import Loading from "../components/common/Loading";
 import Pagination from "../components/common/Pagination";
+import usePageTitle from "../hooks/usePageTitle";
 import { productApi, brandApi } from "../services/customerService";
 
 const Search = () => {
   const [searchParams] = useSearchParams();
   const keyword = searchParams.get("keyword") || "";
+  usePageTitle(keyword ? `Tìm kiếm: ${keyword}` : 'Tìm kiếm');
 
   const [products, setProducts] = useState([]);
   const [brands, setBrands] = useState([]);
