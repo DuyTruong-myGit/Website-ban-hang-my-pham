@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { couponApi } from '../services/couponService';
+import usePageTitle from '../hooks/usePageTitle';
 import './Cart.css';
 
 // ─── Helper format tiền ──────────────────────────────────────────────────────
@@ -220,6 +221,7 @@ const OrderSummary = ({ totalPrice, totalItems, discount, couponCode, onCheckout
 
 // ─── Main Cart Page ──────────────────────────────────────────────────────────
 export default function Cart() {
+    usePageTitle('Giỏ Hàng');
     const navigate = useNavigate();
     const { token } = useAuth();
     const { items, totalItems, totalPrice, loading, cartError, updateQuantity, removeItem, clearCart } = useCart();

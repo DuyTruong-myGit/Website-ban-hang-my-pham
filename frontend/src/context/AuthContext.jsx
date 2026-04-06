@@ -2,13 +2,14 @@
 // AI hỗ trợ: Xây dựng Landing Page với các khối text tạm thời thay thế cho hình ảnh để tránh lỗi tải tài nguyên.
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 // Tạo instance axios riêng để dùng xuyên suốt app
 const authAxios = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+    baseURL: API_BASE_URL,
 });
 
 export const AuthProvider = ({ children }) => {

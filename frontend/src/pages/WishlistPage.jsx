@@ -5,8 +5,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { wishlistApi } from '../services/wishlistService';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import usePageTitle from '../hooks/usePageTitle';
 
 const WishlistPage = () => {
+    usePageTitle('Sản Phẩm Yêu Thích');
     const { token } = useAuth();
     const { addToCart } = useCart();
     const navigate = useNavigate();

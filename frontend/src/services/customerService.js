@@ -1,8 +1,9 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/apiConfig";
 
-// Khởi tạo trực tiếp API Client không cần import file bên ngoài
+// AI hỗ trợ: Sử dụng cấu hình API tập trung để hỗ trợ Deployment Dynamic
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api",
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },

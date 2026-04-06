@@ -1,6 +1,7 @@
-// couponService.js — TV3: API calls cho module Coupon / Mã giảm giá
+import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const API_BASE = API_BASE_URL;
 
 const getAuthHeaders = () => ({
     'Content-Type': 'application/json',

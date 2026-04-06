@@ -15,6 +15,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import StatsCard from '../../components/admin/StatsCard';
 import Loading from '../../components/common/Loading';
 import { reportApi } from '../../services/adminService';
+import usePageTitle from '../../hooks/usePageTitle';
 
 ChartJS.register(
   CategoryScale,
@@ -28,6 +29,7 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
+    usePageTitle('Dashboard Admin');
     const [overview, setOverview] = useState(null);
     const [topProducts, setTopProducts] = useState([]);
     const [revenueData, setRevenueData] = useState([]);

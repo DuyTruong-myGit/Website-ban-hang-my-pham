@@ -3,6 +3,7 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
 import Loading from "../../components/common/Loading";
 import Modal from "../../components/common/Modal";
+import usePageTitle from "../../hooks/usePageTitle";
 import {
   adminCategoryApi,
   uploadApi,

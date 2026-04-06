@@ -3,6 +3,7 @@ import { Container, Row, Col, Carousel } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import ProductGrid from "../components/common/ProductGrid";
 import Loading from "../components/common/Loading";
+import usePageTitle from "../hooks/usePageTitle";
 import {
   productApi,
   categoryApi,
@@ -11,6 +12,7 @@ import {
 } from "../services/customerService";
 
 const Home = () => {
+  usePageTitle('Trang Chủ');
   // States
   const [heroBanners, setHeroBanners] = useState([]);
   const [categories, setCategories] = useState([]);

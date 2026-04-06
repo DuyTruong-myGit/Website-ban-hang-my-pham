@@ -4,6 +4,7 @@ import DataTable from "../../components/admin/DataTable";
 import Loading from "../../components/common/Loading";
 import Modal from "../../components/common/Modal";
 import { adminBrandApi } from "../../services/adminProductService";
+import usePageTitle from "../../hooks/usePageTitle";
 
 const AdminBrands = () => {
   const [brands, setBrands] = useState([]);

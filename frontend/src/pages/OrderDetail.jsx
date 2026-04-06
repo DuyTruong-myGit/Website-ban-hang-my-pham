@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { orderApi } from '../services/orderService';
+import usePageTitle from '../hooks/usePageTitle';
 import './Orders.css';
 
 const formatVND = (n) =>
@@ -20,6 +21,7 @@ export default function OrderDetail() {
     const location = useLocation();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
+    usePageTitle(order ? `Đơn hàng ${order.orderCode}` : 'Chi tiết đơn hàng');
     const [error, setError] = useState('');
 
     const justOrdered = location.state?.success;
