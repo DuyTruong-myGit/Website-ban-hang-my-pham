@@ -348,15 +348,9 @@ const Header = () => {
                   Skin & Spa
                 </Link>
 
-                {/* Cẩm nang: Thường thuộc phạm vi quản lý Bài viết/Blog của thành viên khác */}
+                {/* Cẩm nang: Trỏ tới Pages CMS do TV5 phát triển */}
                 <Link
-                  to="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    alert(
-                      "Tính năng Cẩm nang (Blog) thuộc phạm vi đang được phát triển!",
-                    );
-                  }}
+                  to="/pages"
                   className="text-dark text-decoration-none hover-hasaki"
                 >
                   Cẩm nang
