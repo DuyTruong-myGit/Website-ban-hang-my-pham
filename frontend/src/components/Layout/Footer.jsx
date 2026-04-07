@@ -1,5 +1,6 @@
 import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
     return (
@@ -9,18 +10,18 @@ const Footer = () => {
                     <Col md={3}>
                         <h6 className="fw-bold mb-3">Về AuraBeauty.VN</h6>
                         <ul className="list-unstyled text-muted" style={{ fontSize: '14px' }}>
-                            <li className="mb-2">Giới thiệu AuraBeauty</li>
-                            <li className="mb-2">Hệ thống cửa hàng</li>
-                            <li className="mb-2">Điều khoản sử dụng</li>
-                            <li className="mb-2">Chính sách bảo mật</li>
+                            <li className="mb-2"><Link to="/pages/ve-chung-toi" className="text-decoration-none text-muted hover-primary">Giới thiệu AuraBeauty</Link></li>
+                            <li className="mb-2"><Link to="/pages/he-thong-cua-hang" className="text-decoration-none text-muted hover-primary">Hệ thống cửa hàng</Link></li>
+                            <li className="mb-2"><Link to="/pages/dieu-khoan-su-dung" className="text-decoration-none text-muted hover-primary">Điều khoản sử dụng</Link></li>
+                            <li className="mb-2"><Link to="/pages/chinh-sach-bao-mat" className="text-decoration-none text-muted hover-primary">Chính sách bảo mật</Link></li>
                         </ul>
                     </Col>
                     <Col md={3}>
                         <h6 className="fw-bold mb-3">HỖ TRỢ KHÁCH HÀNG</h6>
                         <ul className="list-unstyled text-muted" style={{ fontSize: '14px' }}>
-                            <li className="mb-2">Tra cứu đơn hàng</li>
-                            <li className="mb-2">Chính sách đổi trả</li>
-                            <li className="mb-2">Câu hỏi thường gặp</li>
+                            <li className="mb-2"><Link to="/account/orders" className="text-decoration-none text-muted hover-primary">Tra cứu đơn hàng</Link></li>
+                            <li className="mb-2"><Link to="/pages/chinh-sach-doi-tra" className="text-decoration-none text-muted hover-primary">Chính sách đổi trả</Link></li>
+                            <li className="mb-2"><Link to="/pages/cau-hoi-thuong-gap" className="text-decoration-none text-muted hover-primary">Câu hỏi thường gặp</Link></li>
                             <li>Liên hệ: 1800 6324</li>
                         </ul>
                     </Col>
