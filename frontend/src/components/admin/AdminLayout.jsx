@@ -27,8 +27,6 @@ const AdminLayout = ({ children }) => {
     { path: "/admin/coupons", icon: "bi-tag", label: "Mã giảm giá" },
     { path: "/admin/users", icon: "bi-people", label: "Quản lý Users" },
     { path: "/admin/logs", icon: "bi-journal-text", label: "Admin Logs" },
-    { path: "/admin/inventory", icon: "bi-boxes", label: "Quản lý Tồn kho" },
-    { path: "/admin/pages", icon: "bi-file-earmark-text", label: "Nội dung trang" },
     { path: "/admin/chats", icon: "bi-chat-dots", label: "Quản lý Chat" },
     { path: "/admin/reviews", icon: "bi-star", label: "Quản lý Đánh giá" }, // TV4
   ];
