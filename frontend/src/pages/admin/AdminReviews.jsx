@@ -7,6 +7,7 @@ import { reviewApi } from '../../services/reviewService';
 
 const AdminReviews = () => {
     const [reviews, setReviews] = useState([]);
+    const [sortBy, setSortBy] = useState('newest');
     const [loading, setLoading] = useState(true);
     const [showReplyModal, setShowReplyModal] = useState(false);
     const [selectedReview, setSelectedReview] = useState(null);
@@ -75,13 +76,32 @@ const AdminReviews = () => {
         } catch { return '—'; }
     };
 
+    const sortedReviews = [...reviews].sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+        if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+        if (sortBy === 'rating_high') return b.rating - a.rating;
+        if (sortBy === 'rating_low') return a.rating - b.rating;
+        return 0;
+    });
+
     return (
         <AdminLayout>
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <h4 className="fw-bold mb-0">
-                    <i className="bi bi-star me-2 text-warning"></i>Quản lý Đánh giá
-                </h4>
-                <Badge bg="secondary">{reviews.length} đánh giá</Badge>
+                <div className="d-flex align-items-center gap-3">
+                    <h4 className="fw-bold mb-0">
+                        <i className="bi bi-star me-2 text-warning"></i>Quản lý Đánh giá
+                    </h4>
+                    <Badge bg="secondary">{reviews.length} đánh giá</Badge>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                    <span className="text-muted small fw-semibold">Sắp xếp:</span>
+                    <Form.Select size="sm" style={{ width: '160px' }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                        <option value="newest">Mới &rarr; Cũ</option>
+                        <option value="oldest">Cũ &rarr; Mới</option>
+                        <option value="rating_high">Số sao (Cao &rarr; Thấp)</option>
+                        <option value="rating_low">Số sao (Thấp &rarr; Cao)</option>
+                    </Form.Select>
+                </div>
             </div>
 
             {message && (
@@ -106,9 +126,9 @@ const AdminReviews = () => {
                     <tbody>
                         {loading ? (
                             <tr><td colSpan="7" className="text-center py-4">Đang tải...</td></tr>
-                        ) : reviews.length === 0 ? (
+                        ) : sortedReviews.length === 0 ? (
                             <tr><td colSpan="7" className="text-center py-4 text-muted">Chưa có đánh giá nào.</td></tr>
-                        ) : reviews.map(review => (
+                        ) : sortedReviews.map(review => (
                             <tr key={review.id} style={{ opacity: review.isHidden ? 0.5 : 1 }}>
                                 <td>
                                     <div className="fw-bold" style={{ fontSize: '0.85rem' }}>{review.userName}</div>

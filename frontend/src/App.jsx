@@ -38,10 +38,14 @@ import AdminBrands from "./pages/admin/AdminBrands";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminProducts from "./pages/admin/AdminProducts";
 import Search from "./pages/Search";
+import PageDetail from "./pages/PageDetail";
+import PageList from "./pages/PageList";
 // Pages — TV5
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminLogs from "./pages/admin/AdminLogs";
+import AdminInventory from "./pages/admin/AdminInventory";
+import AdminPages from "./pages/admin/AdminPages";
 import StaffDashboard from "./pages/staff/StaffDashboard";
 import StaffOrders from "./pages/staff/StaffOrders";
 // Pages — TV4
@@ -125,6 +129,22 @@ const AppRoutes = () => {
           element={
             <AppLayout>
               <Search />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/pages"
+          element={
+            <AppLayout>
+              <PageList />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/pages/:slug"
+          element={
+            <AppLayout>
+              <PageDetail />
             </AppLayout>
           }
         />
@@ -296,6 +316,22 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/admin/inventory"
+          element={
+            <AdminRoute>
+              <AdminInventory />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/pages"
+          element={
+            <AdminRoute>
+              <AdminPages />
+            </AdminRoute>
+          }
+        />
+        <Route
           path="/admin/chats"
           element={
             <AdminRoute>
@@ -344,6 +380,14 @@ const AppRoutes = () => {
           element={
             <StaffRoute>
               <StaffQuestions />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/reviews"
+          element={
+            <StaffRoute>
+              <AdminReviews />
             </StaffRoute>
           }
         />

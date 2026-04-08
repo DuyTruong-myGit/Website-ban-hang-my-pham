@@ -27,6 +27,8 @@ const AdminLayout = ({ children }) => {
     { path: "/admin/coupons", icon: "bi-tag", label: "Mã giảm giá" },
     { path: "/admin/users", icon: "bi-people", label: "Quản lý Users" },
     { path: "/admin/logs", icon: "bi-journal-text", label: "Admin Logs" },
+    { path: "/admin/inventory", icon: "bi-boxes", label: "Quản lý Tồn kho" },
+    { path: "/admin/pages", icon: "bi-file-earmark-text", label: "Nội dung trang" },
     { path: "/admin/chats", icon: "bi-chat-dots", label: "Quản lý Chat" },
     { path: "/admin/reviews", icon: "bi-star", label: "Quản lý Đánh giá" }, // TV4
   ];
@@ -40,6 +42,7 @@ const AdminLayout = ({ children }) => {
     { path: "/staff/orders", icon: "bi-bag-check", label: "Xử lý Đơn hàng" },
     { path: "/staff/chats", icon: "bi-chat-dots", label: "Hỗ trợ Khách (Chat)" }, // TV4 - Chat
     { path: "/staff/questions", icon: "bi-question-circle", label: "Hỏi đáp" }, // TV4 - Q&A
+    { path: "/staff/reviews", icon: "bi-star", label: "Quản lý Đánh giá" }, // TV4 - Đánh giá
   ];
 
   const isAdmin = user?.role === "admin";

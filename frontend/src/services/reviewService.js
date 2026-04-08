@@ -38,7 +38,7 @@ export const reviewApi = {
 
     // Admin: Trả lời
     adminReply: async (reviewId, content) => {
-        const res = await apiClient.put(`/admin/reviews/${reviewId}/reply`, { content });
+        const res = await apiClient.put(`/admin/reviews/${reviewId}/reply`, { reply: content });
         return res.data;
     },
 

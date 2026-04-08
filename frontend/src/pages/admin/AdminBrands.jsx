@@ -3,17 +3,24 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
 import Loading from "../../components/common/Loading";
 import Modal from "../../components/common/Modal";
-import { adminBrandApi } from "../../services/adminProductService";
+import ImageUpload from "../../components/admin/ImageUpload";
+import { adminBrandApi, uploadApi } from "../../services/adminProductService";
 import usePageTitle from "../../hooks/usePageTitle";
 
 const AdminBrands = () => {
+  usePageTitle("Quản lý Thương hiệu");
+
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  // Modal state
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState(null);
 
-  // ĐÃ BỔ SUNG: originCountry, website
+  // Form state
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -30,7 +37,7 @@ const AdminBrands = () => {
       const res = await adminBrandApi.getAll();
       if (res.success) setBrands(res.data);
     } catch (error) {
-      alert(error.message);
+      alert("Lỗi tải danh sách thương hiệu: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -40,14 +47,130 @@ const AdminBrands = () => {
     fetchBrands();
   }, []);
 
-  const handleSubmit = async () => {
+  // Hàm tự động tạo Slug từ Tên thương hiệu
+  const generateSlug = (text) => {
+    return text
+      .toString()
+      .toLowerCase()
+      .replace(/á|à|ả|ạ|ã|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, "a")
+      .replace(/é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, "e")
+      .replace(/i|í|ì|ỉ|ĩ|ị/gi, "i")
+      .replace(/ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, "o")
+      .replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, "u")
+      .replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, "y")
+      .replace(/đ/gi, "d")
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "");
+  };
+
+  const handleNameChange = (e) => {
+    const newName = e.target.value;
+    setFormData({
+      ...formData,
+      name: newName,
+      // Chỉ tự động cập nhật slug nếu đang thêm mới
+      slug: isEditing ? formData.slug : generateSlug(newName),
+    });
+  };
+
+  // Xử lý Upload Ảnh Logo lên Cloudinary
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
     try {
-      if (isEditing) await adminBrandApi.update(currentId, formData);
-      else await adminBrandApi.create(formData);
-      setShowModal(false);
-      fetchBrands();
+      const res = await uploadApi.uploadImage(file);
+      if (res.success) {
+        setFormData({ ...formData, logoUrl: res.data.url });
+      }
     } catch (error) {
-      alert(error.message);
+      alert("Lỗi upload ảnh: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleAddNew = () => {
+    setFormData({
+      name: "",
+      slug: "",
+      logoUrl: "",
+      description: "",
+      originCountry: "",
+      website: "",
+      isActive: true,
+    });
+    setIsEditing(false);
+    setShowModal(true);
+  };
+
+  const handleEdit = (brand) => {
+    setCurrentId(brand.id || brand._id);
+    setFormData({
+      name: brand.name || "",
+      slug: brand.slug || "",
+      logoUrl: brand.logoUrl || brand.logo_url || "",
+      description: brand.description || "",
+      originCountry: brand.originCountry || brand.origin_country || "",
+      website: brand.website || "",
+      isActive: brand.isActive !== undefined ? brand.isActive : true,
+    });
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleDeleteClick = (brand) => {
+    setCurrentId(brand.id || brand._id);
+    setShowDeleteModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.slug) {
+      alert("Vui lòng nhập Tên và Slug thương hiệu!");
+      return;
+    }
+
+    try {
+      // 🌟 MẤU CHỐT: Map dữ liệu sang snake_case cho chuẩn với Node.js
+      const payload = {
+        name: formData.name,
+        slug: formData.slug,
+        logo_url: formData.logoUrl,
+        description: formData.description,
+        origin_country: formData.originCountry,
+        website: formData.website,
+        is_active: formData.isActive,
+      };
+
+      let res;
+      if (isEditing) {
+        res = await adminBrandApi.update(currentId, payload);
+      } else {
+        res = await adminBrandApi.create(payload);
+      }
+
+      if (res.success) {
+        setShowModal(false);
+        fetchBrands();
+      }
+    } catch (error) {
+      alert("Lỗi lưu thương hiệu: " + error.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const res = await adminBrandApi.delete(currentId);
+      if (res.success) {
+        setShowDeleteModal(false);
+        fetchBrands();
+      }
+    } catch (error) {
+      alert("Lỗi xóa thương hiệu: " + error.message);
     }
   };
 
@@ -56,96 +179,106 @@ const AdminBrands = () => {
       header: "Logo",
       render: (row) => (
         <img
-          src={row.logoUrl || "https://via.placeholder.com/50"}
-          alt="logo"
-          style={{ width: "40px", height: "40px", objectFit: "contain" }}
+          src={row.logoUrl || row.logo_url || "https://via.placeholder.com/60"}
+          alt={row.name}
+          style={{
+            width: "60px",
+            height: "60px",
+            objectFit: "contain",
+            background: "#fff",
+            borderRadius: "8px",
+            padding: "4px",
+            border: "1px solid #eee",
+          }}
         />
       ),
     },
     { field: "name", header: "Tên thương hiệu" },
-    { field: "originCountry", header: "Xuất xứ" },
+    {
+      field: "originCountry",
+      header: "Xuất xứ",
+      render: (row) => row.originCountry || row.origin_country || "—",
+    },
     {
       header: "Trạng thái",
       render: (row) => (
         <span
-          className={`admin-badge admin-badge-${row.isActive ? "success" : "secondary"}`}
+          className={`badge ${row.isActive ? "bg-success" : "bg-secondary"}`}
         >
-          {row.isActive ? "Đang hợp tác" : "Ngưng"}
+          {row.isActive ? "Đang hợp tác" : "Ngừng hợp tác"}
         </span>
       ),
     },
     {
-      header: "Hành động",
+      header: "Thao tác",
       render: (row) => (
-        <button
-          className="btn btn-sm btn-light border"
-          onClick={() => {
-            setIsEditing(true);
-            setCurrentId(row.id || row._id);
-            setFormData({
-              name: row.name || "",
-              slug: row.slug || "",
-              logoUrl: row.logoUrl || "",
-              description: row.description || "",
-              originCountry: row.originCountry || "",
-              website: row.website || "",
-              isActive: row.isActive !== false,
-            });
-            setShowModal(true);
-          }}
-        >
-          <i className="bi bi-pencil text-primary"></i> Sửa
-        </button>
+        <div className="d-flex gap-2">
+          <button
+            className="btn btn-sm btn-outline-primary"
+            onClick={() => handleEdit(row)}
+            title="Sửa"
+          >
+            <i className="bi bi-pencil"></i>
+          </button>
+          <button
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => handleDeleteClick(row)}
+            title="Xóa"
+          >
+            <i className="bi bi-trash"></i>
+          </button>
+        </div>
       ),
     },
   ];
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <Loading message="Đang tải danh sách thương hiệu..." />
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
-      <div className="d-flex justify-content-between mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h4 className="fw-bold mb-1">Quản lý Thương hiệu</h4>
-          <p className="text-muted mb-0">Thêm, sửa, quản lý các hãng mỹ phẩm</p>
+          <p className="text-muted mb-0">Danh sách đối tác nhãn hàng</p>
         </div>
-        <button
-          className="btn text-white fw-medium px-4 py-2"
-          style={{ background: "var(--admin-gradient-success)" }}
-          onClick={() => {
-            setIsEditing(false);
-            setFormData({
-              name: "",
-              slug: "",
-              logoUrl: "",
-              description: "",
-              originCountry: "",
-              website: "",
-              isActive: true,
-            });
-            setShowModal(true);
-          }}
-        >
-          <i className="bi bi-plus-lg me-2"></i>Thêm Brand
+        <button className="btn btn-success" onClick={handleAddNew}>
+          <i className="bi bi-plus-lg me-2"></i>Thêm Thương Hiệu
         </button>
       </div>
 
-      {loading ? (
-        <Loading />
-      ) : (
-        <DataTable
-          columns={columns}
-          data={brands}
-          emptyMessage="Chưa có thương hiệu nào."
-        />
-      )}
+      <DataTable
+        columns={columns}
+        data={brands}
+        emptyMessage="Chưa có thương hiệu nào."
+      />
 
+      {/* Modal Thêm/Sửa */}
       <Modal
         show={showModal}
-        title={isEditing ? "Sửa Brand" : "Thêm Brand"}
+        title={isEditing ? "Cập nhật Thương Hiệu" : "Thêm Thương Hiệu"}
         onClose={() => setShowModal(false)}
         onConfirm={handleSubmit}
+        confirmText={isEditing ? "Lưu thay đổi" : "Tạo Thương Hiệu"}
+        confirmVariant="success"
       >
-        <div className="row">
-          <div className="col-md-6 mb-3">
+        <div className="mb-3">
+          <ImageUpload
+            images={formData.logoUrl ? [formData.logoUrl] : []}
+            onUpload={handleImageUpload}
+            onRemove={() => setFormData({ ...formData, logoUrl: "" })}
+            uploading={uploading}
+            multiple={false}
+          />
+        </div>
+
+        <div className="row mb-3">
+          <div className="col-md-6">
             <label className="form-label small fw-medium">
               Tên thương hiệu <span className="text-danger">*</span>
             </label>
@@ -153,16 +286,11 @@ const AdminBrands = () => {
               type="text"
               className="form-control"
               value={formData.name}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  name: e.target.value,
-                  slug: e.target.value.toLowerCase().replace(/ /g, "-"),
-                })
-              }
+              onChange={handleNameChange}
+              placeholder="VD: La Roche-Posay"
             />
           </div>
-          <div className="col-md-6 mb-3">
+          <div className="col-md-6">
             <label className="form-label small fw-medium">
               Slug <span className="text-danger">*</span>
             </label>
@@ -173,37 +301,27 @@ const AdminBrands = () => {
               onChange={(e) =>
                 setFormData({ ...formData, slug: e.target.value })
               }
+              placeholder="vd: la-roche-posay"
             />
           </div>
         </div>
 
-        <div className="mb-3">
-          <label className="form-label small fw-medium">Logo URL</label>
-          <input
-            type="text"
-            className="form-control"
-            value={formData.logoUrl}
-            onChange={(e) =>
-              setFormData({ ...formData, logoUrl: e.target.value })
-            }
-          />
-        </div>
-
-        {/* CÁC TRƯỜNG ĐÃ BỔ SUNG */}
-        <div className="row">
-          <div className="col-md-6 mb-3">
-            <label className="form-label small fw-medium">Xuất xứ</label>
+        <div className="row mb-3">
+          <div className="col-md-6">
+            <label className="form-label small fw-medium">
+              Quốc gia (Xuất xứ)
+            </label>
             <input
               type="text"
               className="form-control"
-              placeholder="VD: Hàn Quốc, Pháp"
+              placeholder="VD: Pháp"
               value={formData.originCountry}
               onChange={(e) =>
                 setFormData({ ...formData, originCountry: e.target.value })
               }
             />
           </div>
-          <div className="col-md-6 mb-3">
+          <div className="col-md-6">
             <label className="form-label small fw-medium">Website</label>
             <input
               type="text"
@@ -248,6 +366,21 @@ const AdminBrands = () => {
             Đang hợp tác (Hiển thị)
           </label>
         </div>
+      </Modal>
+
+      {/* Modal Xóa */}
+      <Modal
+        show={showDeleteModal}
+        title="Xác nhận xóa"
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        confirmText="Xóa"
+        confirmVariant="danger"
+      >
+        <p className="mb-0 text-danger">
+          Bạn có chắc chắn muốn xóa thương hiệu này? Hành động này không thể
+          hoàn tác.
+        </p>
       </Modal>
     </AdminLayout>
   );
