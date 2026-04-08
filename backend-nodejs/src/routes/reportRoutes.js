@@ -7,12 +7,12 @@ import {
   getRecentOrders,
   getLowStockList,
 } from "../controllers/reportController.js";
-import { protect, admin } from "../middleware/authMiddleware.js";
+import { protect, admin, adminOrStaff } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Áp dụng xác thực và phân quyền cho TẤT CẢ route bên dưới
-router.use(protect, admin);
+// Áp dụng xác thực cho TẤT CẢ route bên dưới
+router.use(protect, adminOrStaff);
 
 router.get("/overview", getOverview);
 router.get("/debug", getDebug);
