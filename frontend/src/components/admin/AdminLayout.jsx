@@ -42,6 +42,7 @@ const AdminLayout = ({ children }) => {
     { path: "/staff/orders", icon: "bi-bag-check", label: "Xử lý Đơn hàng" },
     { path: "/staff/chats", icon: "bi-chat-dots", label: "Hỗ trợ Khách (Chat)" }, // TV4 - Chat
     { path: "/staff/questions", icon: "bi-question-circle", label: "Hỏi đáp" }, // TV4 - Q&A
+    { path: "/staff/reviews", icon: "bi-star", label: "Quản lý Đánh giá" }, // TV4 - Đánh giá
   ];
 
   const isAdmin = user?.role === "admin";

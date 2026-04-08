@@ -23,6 +23,12 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes, { orderAdminRoutes } from "./routes/orderRoutes.js";
 
+// ── Import Routes — TV4 (Chat & Đánh giá) ─────────────────────────────
+import chatRoutes from "./routes/chatRoutes.js";
+import reviewRoutes, { adminRouter as reviewAdminRoutes } from "./routes/reviewRoutes.js";
+import questionRoutes, { staffRouter as questionStaffRoutes } from "./routes/questionRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+
 // ── Import Routes — TV5 (Admin Dashboard & Quản lý) ────────────────────
 import reportRoutes from "./routes/reportRoutes.js";
 import adminLogRoutes from "./routes/adminLogRoutes.js";
@@ -68,6 +74,16 @@ app.use("/api/payments", paymentRoutes);             // GET /:orderId
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin/orders", orderAdminRoutes);
+
+// --- TV4: Chat, Đánh giá, Hỏi đáp, Thông báo ---
+app.use("/api/chat/rooms", chatRoutes);
+app.use("/api/staff/chat", chatRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/admin/reviews", reviewAdminRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/staff/questions", questionStaffRoutes);
+app.use("/api/notifications", notificationRoutes);
+
 
 // --- TV5: Admin Dashboard & Quản lý ---
 app.use("/api/admin/reports", reportRoutes);
