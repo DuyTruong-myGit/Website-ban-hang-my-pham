@@ -51,3 +51,23 @@ export const admin = (req, res, next) => {
     throw new Error('Yêu cầu quyền Quản trị viên.');
   }
 };
+
+// Kiểm tra quyền Admin hoặc Staff
+export const adminOrStaff = (req, res, next) => {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'staff')) {
+    next();
+  } else {
+    res.status(403);
+    throw new Error('Yêu cầu quyền Quản trị viên hoặc Nhân viên.');
+  }
+};
+
+// Kiểm tra quyền Staff
+export const staff = (req, res, next) => {
+  if (req.user && req.user.role === 'staff') {
+    next();
+  } else {
+    res.status(403);
+    throw new Error('Yêu cầu quyền Nhân viên.');
+  }
+};

@@ -72,7 +72,18 @@ const AdminLogs = () => {
         },
         {
             header: 'User ID',
-            render: (row) => <code className="small text-danger bg-light px-2 py-1 rounded">{row.userId || row.user_id || '—'}</code>
+            render: (row) => {
+                const user = row.userId || row.user_id;
+                let displayUser = '—';
+                if (user) {
+                    if (typeof user === 'object') {
+                        displayUser = user.name || user.email || user._id;
+                    } else {
+                        displayUser = user;
+                    }
+                }
+                return <code className="small text-danger bg-light px-2 py-1 rounded">{displayUser}</code>;
+            }
         },
         {
             header: 'Hành động',
