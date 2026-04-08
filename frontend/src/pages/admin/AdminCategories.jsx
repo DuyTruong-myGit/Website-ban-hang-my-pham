@@ -3,6 +3,7 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
 import Loading from "../../components/common/Loading";
 import Modal from "../../components/common/Modal";
+import ImageUpload from "../../components/admin/ImageUpload";
 import usePageTitle from "../../hooks/usePageTitle";
 import {
   adminCategoryApi,
@@ -10,6 +11,8 @@ import {
 } from "../../services/adminProductService";
 
 const AdminCategories = () => {
+  usePageTitle("Quản lý Danh mục");
+
   const [categories, setCategories] = useState([]);
   const [flatCategories, setFlatCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +34,7 @@ const AdminCategories = () => {
     isActive: true,
   });
 
+  // Chuyển cây danh mục thành mảng 1 chiều để dễ hiển thị trên Table và Dropdown
   const flattenCategories = (tree, prefix = "") => {
     let result = [];
     tree.forEach((cat) => {
@@ -61,66 +65,51 @@ const AdminCategories = () => {
     fetchCategories();
   }, []);
 
-  const generateSlug = (name) => {
-    return name
+  // Tự động tạo slug từ tên
+  const generateSlug = (text) => {
+    return text
+      .toString()
       .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
+      .replace(/á|à|ả|ạ|ã|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, "a")
+      .replace(/é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, "e")
+      .replace(/i|í|ì|ỉ|ĩ|ị/gi, "i")
+      .replace(/ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, "o")
+      .replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, "u")
+      .replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, "y")
+      .replace(/đ/gi, "d")
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "");
   };
 
   const handleNameChange = (e) => {
-    const name = e.target.value;
-    setFormData({ ...formData, name, slug: generateSlug(name) });
+    const newName = e.target.value;
+    setFormData({
+      ...formData,
+      name: newName,
+      slug: isEditing ? formData.slug : generateSlug(newName),
+    });
   };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setUploading(true);
     try {
       const res = await uploadApi.uploadImage(file);
-      if (res && res.success) {
+      if (res.success) {
         setFormData({ ...formData, imageUrl: res.data.url });
-      } else {
-        alert("Lỗi upload ảnh: " + (res.message || "Lỗi server"));
       }
     } catch (error) {
-      alert("Lỗi kết nối khi upload ảnh.");
+      alert("Lỗi upload ảnh: " + error.message);
     } finally {
       setUploading(false);
-      e.target.value = null;
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      const dataToSubmit = { ...formData, parentId: formData.parentId || null };
-      if (isEditing) await adminCategoryApi.update(currentId, dataToSubmit);
-      else await adminCategoryApi.create(dataToSubmit);
-
-      setShowModal(false);
-      fetchCategories();
-    } catch (error) {
-      alert("Lỗi lưu danh mục: " + error.message);
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await adminCategoryApi.delete(currentId);
-      setShowDeleteModal(false);
-      fetchCategories();
-    } catch (error) {
-      alert("Lỗi xóa danh mục: " + error.message);
-    }
-  };
-
-  const openCreateModal = () => {
-    setIsEditing(false);
+  const handleAddNew = () => {
     setFormData({
       name: "",
       slug: "",
@@ -130,111 +119,164 @@ const AdminCategories = () => {
       parentId: "",
       isActive: true,
     });
+    setIsEditing(false);
     setShowModal(true);
   };
 
-  const openEditModal = (cat) => {
-    setIsEditing(true);
+  const handleEdit = (cat) => {
     setCurrentId(cat.id || cat._id);
     setFormData({
-      name: cat.name,
-      slug: cat.slug,
-      imageUrl: cat.imageUrl || "",
+      name: cat.name || "",
+      slug: cat.slug || "",
+      imageUrl: cat.imageUrl || cat.image_url || "",
       description: cat.description || "",
-      sortOrder: cat.sortOrder || 0,
-      parentId: cat.parentId || "",
-      isActive: cat.isActive,
+      parentId: cat.parentId || cat.parent_id || "",
+      sortOrder: cat.sortOrder || cat.sort_order || 0,
+      isActive: cat.isActive !== undefined ? cat.isActive : true,
     });
+    setIsEditing(true);
     setShowModal(true);
+  };
+
+  const handleDeleteClick = (cat) => {
+    setCurrentId(cat.id || cat._id);
+    setShowDeleteModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.slug) {
+      alert("Vui lòng nhập Tên và Slug danh mục!");
+      return;
+    }
+
+    // 🌟 MẤU CHỐT: Nếu không chọn parentId, phải gửi lên null để Node.js không báo lỗi ObjectId
+    try {
+      const payload = {
+        name: formData.name,
+        slug: formData.slug,
+        image_url: formData.imageUrl,
+        description: formData.description,
+        parent_id: formData.parentId ? formData.parentId : null,
+        sort_order: Number(formData.sortOrder),
+        is_active: formData.isActive,
+      };
+
+      let res;
+      if (isEditing) {
+        res = await adminCategoryApi.update(currentId, payload);
+      } else {
+        res = await adminCategoryApi.create(payload);
+      }
+
+      if (res.success) {
+        setShowModal(false);
+        fetchCategories();
+      }
+    } catch (error) {
+      alert("Lỗi lưu danh mục: " + error.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const res = await adminCategoryApi.delete(currentId);
+      if (res.success) {
+        setShowDeleteModal(false);
+        fetchCategories();
+      }
+    } catch (error) {
+      alert("Lỗi xóa danh mục: " + error.message);
+    }
   };
 
   const columns = [
     {
       header: "Hình ảnh",
-      render: (row) => (
-        <img
-          src={row.imageUrl || "https://via.placeholder.com/50"}
-          alt="cat"
-          style={{
-            width: "40px",
-            height: "40px",
-            objectFit: "cover",
-            borderRadius: "50%",
-          }}
-        />
-      ),
+      render: (row) =>
+        row.imageUrl || row.image_url ? (
+          <img
+            src={row.imageUrl || row.image_url}
+            alt={row.name}
+            style={{
+              width: "50px",
+              height: "50px",
+              objectFit: "cover",
+              borderRadius: "8px",
+            }}
+          />
+        ) : (
+          <div
+            className="bg-light rounded d-flex align-items-center justify-content-center text-muted"
+            style={{ width: "50px", height: "50px" }}
+          >
+            <i className="bi bi-tag"></i>
+          </div>
+        ),
     },
     {
+      field: "displayName",
       header: "Tên danh mục",
+      style: { fontWeight: "500" },
+    },
+    {
+      header: "Slug",
       render: (row) => (
-        <span className={row.parentId ? "text-muted" : "fw-bold"}>
-          {row.displayName}
-        </span>
+        <code className="text-muted bg-light px-2 py-1 rounded">
+          {row.slug}
+        </code>
       ),
     },
-    { field: "slug", header: "Đường dẫn (Slug)" },
+    { field: "sortOrder", header: "Thứ tự" },
     {
       header: "Trạng thái",
       render: (row) => (
         <span
-          className={`admin-badge admin-badge-${row.isActive !== false ? "success" : "secondary"}`}
+          className={`badge ${row.isActive ? "bg-success" : "bg-secondary"}`}
         >
-          {row.isActive !== false ? "Hiển thị" : "Đã ẩn"}
+          {row.isActive ? "Hiển thị" : "Đang ẩn"}
         </span>
       ),
     },
     {
-      header: "Hành động",
+      header: "Thao tác",
       render: (row) => (
         <div className="d-flex gap-2">
           <button
-            className="btn btn-sm btn-light border"
-            onClick={(e) => {
-              e.stopPropagation();
-              openEditModal(row);
-            }}
+            className="btn btn-sm btn-outline-primary"
+            onClick={() => handleEdit(row)}
+            title="Sửa"
           >
-            <i className="bi bi-pencil text-primary"></i>
+            <i className="bi bi-pencil"></i>
           </button>
           <button
-            className="btn btn-sm btn-light border"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentId(row.id || row._id);
-              setShowDeleteModal(true);
-            }}
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => handleDeleteClick(row)}
+            title="Xóa"
           >
-            <i className="bi bi-trash text-danger"></i>
+            <i className="bi bi-trash"></i>
           </button>
         </div>
       ),
     },
   ];
 
-  if (loading)
+  if (loading) {
     return (
       <AdminLayout>
         <Loading message="Đang tải danh mục..." />
       </AdminLayout>
     );
+  }
 
   return (
     <AdminLayout>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h4 className="fw-bold mb-1">Quản lý Danh mục</h4>
-          <p className="text-muted mb-0">
-            Thêm, sửa, xóa cấu trúc danh mục sản phẩm
-          </p>
+          <p className="text-muted mb-0">Phân loại sản phẩm đa cấp</p>
         </div>
-        <button
-          className="btn text-white fw-medium px-4 py-2"
-          style={{
-            background: "var(--admin-gradient-success)",
-            borderRadius: "8px",
-          }}
-          onClick={openCreateModal}
-        >
+        <button className="btn btn-success" onClick={handleAddNew}>
           <i className="bi bi-plus-lg me-2"></i>Thêm Danh Mục
         </button>
       </div>
@@ -247,138 +289,117 @@ const AdminCategories = () => {
 
       <Modal
         show={showModal}
-        title={isEditing ? "Sửa Danh Mục" : "Thêm Danh Mục Mới"}
+        title={isEditing ? "Cập nhật Danh Mục" : "Thêm Danh Mục"}
         onClose={() => setShowModal(false)}
         onConfirm={handleSubmit}
-        confirmText="Lưu lại"
+        confirmText={isEditing ? "Lưu thay đổi" : "Tạo Danh Mục"}
+        confirmVariant="success"
       >
         <div className="mb-3">
-          <label className="form-label fw-medium small">
-            Tên danh mục <span className="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            value={formData.name}
-            onChange={handleNameChange}
-            placeholder="VD: Sữa rửa mặt"
+          <ImageUpload
+            images={formData.imageUrl ? [formData.imageUrl] : []}
+            onUpload={handleImageUpload}
+            onRemove={() => setFormData({ ...formData, imageUrl: "" })}
+            uploading={uploading}
+            multiple={false}
           />
         </div>
 
-        <div className="mb-3">
-          <label className="form-label fw-medium small">
-            Ảnh đại diện danh mục
-          </label>
-          <div className="d-flex gap-3 align-items-center">
-            <div
-              className="border rounded-circle d-flex align-items-center justify-content-center overflow-hidden bg-light"
-              style={{ width: "60px", height: "60px" }}
+        <div className="row mb-3">
+          <div className="col-md-6">
+            <label className="form-label small fw-medium">
+              Tên danh mục <span className="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              className="form-control"
+              value={formData.name}
+              onChange={handleNameChange}
+              placeholder="VD: Chăm sóc da"
+            />
+          </div>
+          <div className="col-md-6">
+            <label className="form-label small fw-medium">
+              Slug <span className="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              className="form-control"
+              value={formData.slug}
+              onChange={(e) =>
+                setFormData({ ...formData, slug: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        <div className="row mb-3">
+          <div className="col-md-8">
+            <label className="form-label small fw-medium">
+              Danh mục cha (Parent Category)
+            </label>
+            <select
+              className="form-select"
+              value={formData.parentId}
+              onChange={(e) =>
+                setFormData({ ...formData, parentId: e.target.value })
+              }
             >
-              {formData.imageUrl ? (
-                <img
-                  src={formData.imageUrl}
-                  alt="preview"
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                <i className="bi bi-image text-muted fs-4"></i>
-              )}
-            </div>
-            <div className="flex-grow-1">
-              <input
-                type="file"
-                className="form-control form-control-sm"
-                accept="image/*"
-                onChange={handleImageUpload}
-                disabled={uploading}
-              />
-              {uploading && (
-                <small className="text-primary mt-1 d-block">
-                  <i className="spinner-border spinner-border-sm me-1"></i>Đang
-                  tải...
-                </small>
-              )}
-            </div>
+              <option value="">-- Không có (Đây là danh mục gốc) --</option>
+              {flatCategories.map((cat) => {
+                const catId = cat.id || cat._id;
+                // 🌟 Tránh lỗi tự chọn chính nó làm cha gây vòng lặp vô hạn
+                if (isEditing && catId === currentId) return null;
+                return (
+                  <option key={catId} value={catId}>
+                    {cat.displayName}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+          <div className="col-md-4">
+            <label className="form-label small fw-medium">Thứ tự</label>
+            <input
+              type="number"
+              className="form-control"
+              value={formData.sortOrder}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  sortOrder: parseInt(e.target.value) || 0,
+                })
+              }
+            />
           </div>
         </div>
 
         <div className="mb-3">
-          <label className="form-label fw-medium small">
-            Slug (Đường dẫn tĩnh) <span className="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            value={formData.slug}
-            onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-          />
-        </div>
-        <div className="mb-3">
-          <label className="form-label fw-medium small">Danh mục cha</label>
-          <select
-            className="form-select"
-            value={formData.parentId}
-            onChange={(e) =>
-              setFormData({ ...formData, parentId: e.target.value })
-            }
-          >
-            <option value="">-- Không có (Danh mục gốc) --</option>
-            {categories.map((cat) => (
-              <option
-                key={cat.id || cat._id}
-                value={cat.id || cat._id}
-                disabled={currentId === (cat.id || cat._id)}
-              >
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="mb-3 mt-3">
-          <label className="form-label fw-medium small">Mô tả danh mục</label>
+          <label className="form-label small fw-medium">Mô tả thêm</label>
           <textarea
             className="form-control"
             rows="2"
-            value={formData.description || ""}
+            value={formData.description}
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
             }
-            placeholder="Mô tả ngắn gọn về danh mục này..."
           ></textarea>
         </div>
 
-        <div className="mb-3">
-          <label className="form-label fw-medium small">
-            Thứ tự hiển thị (Sort Order)
-          </label>
-          <input
-            type="number"
-            className="form-control"
-            value={formData.sortOrder || 0}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                sortOrder: parseInt(e.target.value) || 0,
-              })
-            }
-          />
-          <div className="form-text" style={{ fontSize: "11px" }}>
-            Số nhỏ hơn sẽ xếp lên trước
-          </div>
-        </div>
-
-        <div className="form-check form-switch mt-4">
+        <div className="form-check form-switch mt-2">
           <input
             className="form-check-input cursor-pointer"
             type="checkbox"
-            id="isActive"
+            id="isActiveCategory"
             checked={formData.isActive}
             onChange={(e) =>
               setFormData({ ...formData, isActive: e.target.checked })
             }
           />
-          <label className="form-check-label cursor-pointer" htmlFor="isActive">
+          <label
+            className="form-check-label cursor-pointer"
+            htmlFor="isActiveCategory"
+          >
             Hiển thị trên website
           </label>
         </div>
@@ -393,8 +414,8 @@ const AdminCategories = () => {
         confirmVariant="danger"
       >
         <p className="mb-0 text-danger">
-          Bạn có chắc chắn muốn xóa danh mục này? Các danh mục con hoặc sản phẩm
-          thuộc danh mục này có thể bị ảnh hưởng.
+          Bạn có chắc chắn muốn xóa danh mục này? Các danh mục con bên trong có
+          thể bị ảnh hưởng.
         </p>
       </Modal>
     </AdminLayout>
