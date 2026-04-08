@@ -3,11 +3,16 @@ import AdminLayout from "../../components/admin/AdminLayout";
 import DataTable from "../../components/admin/DataTable";
 import Loading from "../../components/common/Loading";
 import Modal from "../../components/common/Modal";
-import { adminBannerApi } from "../../services/adminProductService";
+import ImageUpload from "../../components/admin/ImageUpload";
+import { adminBannerApi, uploadApi } from "../../services/adminProductService";
+import usePageTitle from "../../hooks/usePageTitle";
 
 const AdminBanners = () => {
+  usePageTitle("Quản lý Banner");
+
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -32,7 +37,6 @@ const AdminBanners = () => {
     try {
       const res = await adminBannerApi.getAll();
       if (res.success) {
-        // Sắp xếp theo position và sortOrder để dễ nhìn
         const sortedBanners = res.data.sort((a, b) => {
           if (a.position === b.position) return a.sortOrder - b.sortOrder;
           return a.position.localeCompare(b.position);
@@ -40,7 +44,7 @@ const AdminBanners = () => {
         setBanners(sortedBanners);
       }
     } catch (error) {
-      alert("Lỗi tải banner: " + error.message);
+      alert("Lỗi tải danh sách Banner: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -50,32 +54,24 @@ const AdminBanners = () => {
     fetchBanners();
   }, []);
 
-  const handleSubmit = async () => {
+  // Xử lý Upload Ảnh lên Cloudinary
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
     try {
-      if (isEditing) {
-        await adminBannerApi.update(currentId, formData);
-      } else {
-        await adminBannerApi.create(formData);
+      const res = await uploadApi.uploadImage(file);
+      if (res.success) {
+        setFormData({ ...formData, imageUrl: res.data.url });
       }
-      setShowModal(false);
-      fetchBanners();
     } catch (error) {
-      alert("Lỗi lưu banner: " + error.message);
+      alert("Lỗi upload ảnh: " + error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleDelete = async () => {
-    try {
-      await adminBannerApi.delete(currentId);
-      setShowDeleteModal(false);
-      fetchBanners();
-    } catch (error) {
-      alert("Lỗi xóa banner: " + error.message);
-    }
-  };
-
-  const openCreateModal = () => {
-    setIsEditing(false);
+  const handleAddNew = () => {
     setFormData({
       title: "",
       imageUrl: "",
@@ -86,23 +82,77 @@ const AdminBanners = () => {
       endDate: "",
       isActive: true,
     });
+    setIsEditing(false);
     setShowModal(true);
   };
 
-  const openEditModal = (banner) => {
-    setIsEditing(true);
+  const handleEdit = (banner) => {
     setCurrentId(banner.id || banner._id);
     setFormData({
-      title: banner.title,
-      imageUrl: banner.imageUrl,
-      linkUrl: banner.linkUrl,
-      position: banner.position,
-      sortOrder: banner.sortOrder,
-      startDate: banner.startDate || "",
-      endDate: banner.endDate || "",
-      isActive: banner.isActive,
+      title: banner.title || "",
+      imageUrl: banner.imageUrl || banner.image_url || "",
+      linkUrl: banner.linkUrl || banner.link_url || "",
+      position: banner.position || "hero",
+      sortOrder: banner.sortOrder || banner.sort_order || 0,
+      startDate: banner.startDate ? banner.startDate.substring(0, 10) : "",
+      endDate: banner.endDate ? banner.endDate.substring(0, 10) : "",
+      isActive: banner.isActive !== undefined ? banner.isActive : true,
     });
+    setIsEditing(true);
     setShowModal(true);
+  };
+
+  const handleDeleteClick = (banner) => {
+    setCurrentId(banner.id || banner._id);
+    setShowDeleteModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.title || !formData.imageUrl) {
+      alert("Vui lòng nhập tiêu đề và upload hình ảnh!");
+      return;
+    }
+
+    try {
+      // 🌟 MẤU CHỐT: Map dữ liệu từ camelCase sang snake_case để khớp với Backend Node.js
+      const payload = {
+        title: formData.title,
+        image_url: formData.imageUrl,
+        link_url: formData.linkUrl,
+        position: formData.position,
+        sort_order: Number(formData.sortOrder),
+        is_active: formData.isActive,
+        start_date: formData.startDate || null,
+        end_date: formData.endDate || null,
+      };
+
+      let res;
+      if (isEditing) {
+        res = await adminBannerApi.update(currentId, payload);
+      } else {
+        res = await adminBannerApi.create(payload);
+      }
+
+      if (res.success) {
+        setShowModal(false);
+        fetchBanners();
+      }
+    } catch (error) {
+      alert("Lỗi lưu banner: " + error.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const res = await adminBannerApi.delete(currentId);
+      if (res.success) {
+        setShowDeleteModal(false);
+        fetchBanners();
+      }
+    } catch (error) {
+      alert("Lỗi xóa banner: " + error.message);
+    }
   };
 
   const columns = [
@@ -110,74 +160,65 @@ const AdminBanners = () => {
       header: "Hình ảnh",
       render: (row) => (
         <img
-          src={row.imageUrl || "https://via.placeholder.com/150x50"}
+          src={row.imageUrl || row.image_url}
           alt={row.title}
           style={{
             width: "120px",
-            height: "40px",
+            height: "auto",
+            borderRadius: "6px",
             objectFit: "cover",
-            borderRadius: "4px",
-            border: "1px solid #ddd",
           }}
         />
       ),
     },
     { field: "title", header: "Tiêu đề" },
     {
-      header: "Vị trí hiển thị",
+      header: "Vị trí",
       render: (row) => (
-        <span
-          className={`admin-badge admin-badge-${row.position === "hero" ? "primary" : "info"}`}
-        >
-          {row.position.toUpperCase()}
-        </span>
+        <span className="badge bg-info text-dark">{row.position}</span>
       ),
     },
-    { field: "sortOrder", header: "Thứ tự" },
+    { field: "sortOrder", header: "Thứ tự hiển thị" },
     {
       header: "Trạng thái",
       render: (row) => (
         <span
-          className={`admin-badge admin-badge-${row.isActive ? "success" : "secondary"}`}
+          className={`badge ${row.isActive ? "bg-success" : "bg-secondary"}`}
         >
-          {row.isActive ? "Đang hiện" : "Đã ẩn"}
+          {row.isActive ? "Hiển thị" : "Đang ẩn"}
         </span>
       ),
     },
     {
-      header: "Hành động",
+      header: "Thao tác",
       render: (row) => (
         <div className="d-flex gap-2">
           <button
-            className="btn btn-sm btn-light border"
-            onClick={(e) => {
-              e.stopPropagation();
-              openEditModal(row);
-            }}
+            className="btn btn-sm btn-outline-primary"
+            onClick={() => handleEdit(row)}
+            title="Sửa"
           >
-            <i className="bi bi-pencil text-primary"></i>
+            <i className="bi bi-pencil"></i>
           </button>
           <button
-            className="btn btn-sm btn-light border"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentId(row.id || row._id);
-              setShowDeleteModal(true);
-            }}
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => handleDeleteClick(row)}
+            title="Xóa"
           >
-            <i className="bi bi-trash text-danger"></i>
+            <i className="bi bi-trash"></i>
           </button>
         </div>
       ),
     },
   ];
 
-  if (loading)
+  if (loading) {
     return (
       <AdminLayout>
         <Loading message="Đang tải danh sách banner..." />
       </AdminLayout>
     );
+  }
 
   return (
     <AdminLayout>
@@ -185,37 +226,43 @@ const AdminBanners = () => {
         <div>
           <h4 className="fw-bold mb-1">Quản lý Banner</h4>
           <p className="text-muted mb-0">
-            Quản lý hình ảnh quảng cáo trên website
+            Quản lý các hình ảnh quảng cáo trên trang chủ
           </p>
         </div>
-        <button
-          className="btn text-white fw-medium px-4 py-2"
-          style={{
-            background: "var(--admin-gradient-primary)",
-            borderRadius: "8px",
-          }}
-          onClick={openCreateModal}
-        >
-          <i className="bi bi-plus-lg me-2"></i>Thêm Banner
+        <button className="btn btn-success" onClick={handleAddNew}>
+          <i className="bi bi-plus-lg me-2"></i>Thêm Banner Mới
         </button>
       </div>
 
       <DataTable
         columns={columns}
         data={banners}
-        emptyMessage="Chưa có banner nào."
+        emptyMessage="Chưa có banner nào trong hệ thống."
       />
 
       {/* Modal Thêm/Sửa */}
       <Modal
         show={showModal}
-        title={isEditing ? "Sửa Banner" : "Thêm Banner Mới"}
+        title={isEditing ? "Cập nhật Banner" : "Thêm Banner Mới"}
         onClose={() => setShowModal(false)}
         onConfirm={handleSubmit}
+        confirmText={isEditing ? "Lưu thay đổi" : "Tạo Banner"}
+        confirmVariant="success"
       >
+        {/* --- KHU VỰC UPLOAD ẢNH --- */}
         <div className="mb-3">
-          <label className="form-label fw-medium small">
-            Tiêu đề (Chỉ dùng để quản lý) <span className="text-danger">*</span>
+          <ImageUpload
+            images={formData.imageUrl ? [formData.imageUrl] : []}
+            onUpload={handleImageUpload}
+            onRemove={() => setFormData({ ...formData, imageUrl: "" })}
+            uploading={uploading}
+            multiple={false}
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label small fw-medium">
+            Tiêu đề <span className="text-danger">*</span>
           </label>
           <input
             type="text"
@@ -224,53 +271,13 @@ const AdminBanners = () => {
             onChange={(e) =>
               setFormData({ ...formData, title: e.target.value })
             }
-            placeholder="VD: Khuyến mãi mùng 8/3"
+            placeholder="VD: Sale Mỹ Phẩm Mùa Hè"
           />
         </div>
-        <div className="mb-3">
-          <label className="form-label fw-medium small">
-            Đường dẫn ảnh (Image URL) <span className="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            value={formData.imageUrl}
-            onChange={(e) =>
-              setFormData({ ...formData, imageUrl: e.target.value })
-            }
-            placeholder="https://..."
-          />
-          {formData.imageUrl && (
-            <div className="mt-2 text-center border rounded p-1 bg-light">
-              <img
-                src={formData.imageUrl}
-                alt="preview"
-                style={{
-                  maxHeight: "100px",
-                  maxWidth: "100%",
-                  objectFit: "contain",
-                }}
-              />
-            </div>
-          )}
-        </div>
-        <div className="mb-3">
-          <label className="form-label fw-medium small">
-            Link khi click vào ảnh (Tùy chọn)
-          </label>
-          <input
-            type="text"
-            className="form-control"
-            value={formData.linkUrl}
-            onChange={(e) =>
-              setFormData({ ...formData, linkUrl: e.target.value })
-            }
-            placeholder="/category/sua-rua-mat"
-          />
-        </div>
-        <div className="row">
-          <div className="col-md-6 mb-3">
-            <label className="form-label fw-medium small">
+
+        <div className="row mb-3">
+          <div className="col-md-6">
+            <label className="form-label small fw-medium">
               Vị trí hiển thị
             </label>
             <select
@@ -280,67 +287,71 @@ const AdminBanners = () => {
                 setFormData({ ...formData, position: e.target.value })
               }
             >
-              <option value="hero">Hero Banner (To nhất trang chủ)</option>
-              <option value="sidebar">Sidebar (Bên hông danh mục)</option>
-              <option value="popup">Popup (Nổi lên khi vào trang)</option>
+              <option value="hero">Hero Slider (Đỉnh trang)</option>
+              <option value="middle">Banner Giữa trang</option>
+              <option value="bottom">Banner Cuối trang</option>
             </select>
           </div>
-          <div className="col-md-6 mb-3">
-            <label className="form-label fw-medium small">Thứ tự ưu tiên</label>
+          <div className="col-md-6">
+            <label className="form-label small fw-medium">
+              Thứ tự hiển thị
+            </label>
             <input
               type="number"
               className="form-control"
               value={formData.sortOrder}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  sortOrder: parseInt(e.target.value) || 0,
-                })
+                setFormData({ ...formData, sortOrder: e.target.value })
               }
             />
-            <div className="form-text" style={{ fontSize: "11px" }}>
-              Số nhỏ hiện trước
-            </div>
           </div>
         </div>
 
-        <div className="row mt-3">
-          <div className="col-md-6 mb-3">
-            <label className="form-label fw-medium small text-primary">
-              Thời gian bắt đầu (Tùy chọn)
+        <div className="mb-3">
+          <label className="form-label small fw-medium">
+            Đường dẫn liên kết (Link)
+          </label>
+          <input
+            type="text"
+            className="form-control"
+            value={formData.linkUrl}
+            onChange={(e) =>
+              setFormData({ ...formData, linkUrl: e.target.value })
+            }
+            placeholder="VD: /category/cham-soc-da"
+          />
+        </div>
+
+        <div className="row mb-2">
+          <div className="col-md-6">
+            <label className="form-label small fw-medium">
+              Ngày bắt đầu (Tùy chọn)
             </label>
             <input
-              type="datetime-local"
+              type="date"
               className="form-control"
-              value={formData.startDate || ""}
+              value={formData.startDate}
               onChange={(e) =>
                 setFormData({ ...formData, startDate: e.target.value })
               }
             />
           </div>
-          <div className="col-md-6 mb-3">
-            <label className="form-label fw-medium small text-danger">
-              Thời gian kết thúc (Tùy chọn)
+          <div className="col-md-6">
+            <label className="form-label small fw-medium">
+              Ngày kết thúc (Tùy chọn)
             </label>
             <input
-              type="datetime-local"
+              type="date"
               className="form-control"
-              value={formData.endDate || ""}
+              value={formData.endDate}
               onChange={(e) =>
                 setFormData({ ...formData, endDate: e.target.value })
               }
             />
           </div>
         </div>
-        <div
-          className="form-text mb-3"
-          style={{ fontSize: "11px", marginTop: "-10px" }}
-        >
-          Nếu để trống, Banner sẽ hiển thị vĩnh viễn (nếu trạng thái bên dưới
-          đang Bật).
-        </div>
 
-        <div className="form-check form-switch mt-2">
+        <div className="form-check form-switch mt-4">
           <input
             className="form-check-input cursor-pointer"
             type="checkbox"
@@ -369,7 +380,8 @@ const AdminBanners = () => {
         confirmVariant="danger"
       >
         <p className="mb-0 text-danger">
-          Bạn có chắc chắn muốn xóa banner này không?
+          Bạn có chắc chắn muốn xóa banner này không? Hành động này không thể
+          hoàn tác.
         </p>
       </Modal>
     </AdminLayout>

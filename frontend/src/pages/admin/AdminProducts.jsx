@@ -5,6 +5,7 @@ import Loading from "../../components/common/Loading";
 import Pagination from "../../components/common/Pagination";
 import Modal from "../../components/common/Modal";
 import ImageUpload from "../../components/admin/ImageUpload";
+import usePageTitle from "../../hooks/usePageTitle";
 import {
   adminProductApi,
   adminCategoryApi,
@@ -13,6 +14,8 @@ import {
 } from "../../services/adminProductService";
 
 const AdminProducts = () => {
+  usePageTitle("Quản lý Sản phẩm");
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -28,7 +31,6 @@ const AdminProducts = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState(null);
 
-  // Bổ sung tags, attributes và variants vào state mặc định
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -38,17 +40,19 @@ const AdminProducts = () => {
     basePrice: 0,
     salePrice: 0,
     stock: 0,
-    images: [],
-    shortDescription: "",
     description: "",
-    tags: "", // tags để dạng string cách nhau dấu phẩy cho dễ nhập
-    attributes: [], // Mảng động [{key: "", value: ""}]
-    variants: [], // Mảng động [{sku: "", name: "", price: 0, salePrice: 0, stock: 0}]
+    shortDescription: "",
+    images: [],
+    tags: "",
     isActive: true,
     isFeatured: false,
+    isNew: false,
     isBestSeller: false,
+    inStock: true,
+    variants: [],
+    attributes: [],
   });
-  // Hàm đệ quy để kéo danh mục con ra ngang hàng với danh mục cha
+
   const flattenCategories = (tree, prefix = "") => {
     let result = [];
     tree.forEach((cat) => {
@@ -59,11 +63,12 @@ const AdminProducts = () => {
     });
     return result;
   };
-  const fetchData = async () => {
+
+  const fetchData = async (currentPage = 1) => {
     setLoading(true);
     try {
       const [prodRes, catRes, brandRes] = await Promise.all([
-        adminProductApi.getAll({ page, limit: 10 }),
+        adminProductApi.getAll({ page: currentPage, limit: 10 }),
         adminCategoryApi.getAll(),
         adminBrandApi.getAll(),
       ]);
@@ -82,84 +87,55 @@ const AdminProducts = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(page);
   }, [page]);
 
-  const handleNameChange = (e) => {
-    const name = e.target.value;
-    const slug = name
+  const generateSlug = (text) => {
+    return text
+      .toString()
       .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    setFormData({ ...formData, name, slug });
+      .replace(/á|à|ả|ạ|ã|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, "a")
+      .replace(/é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, "e")
+      .replace(/i|í|ì|ỉ|ĩ|ị/gi, "i")
+      .replace(/ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, "o")
+      .replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, "u")
+      .replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, "y")
+      .replace(/đ/gi, "d")
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-")
+      .replace(/^-+/, "")
+      .replace(/-+$/, "");
   };
 
-  // --- XỬ LÝ MẢNG ĐỘNG (ATTRIBUTES) ---
-  const addAttribute = () => {
+  const handleNameChange = (e) => {
+    const newName = e.target.value;
     setFormData({
       ...formData,
-      attributes: [...formData.attributes, { key: "", value: "" }],
+      name: newName,
+      slug: isEditing ? formData.slug : generateSlug(newName),
     });
   };
-  const removeAttribute = (index) => {
-    const newAttr = [...formData.attributes];
-    newAttr.splice(index, 1);
-    setFormData({ ...formData, attributes: newAttr });
-  };
-  const handleAttributeChange = (index, field, val) => {
-    const newAttr = [...formData.attributes];
-    newAttr[index][field] = val;
-    setFormData({ ...formData, attributes: newAttr });
-  };
 
-  // --- XỬ LÝ MẢNG ĐỘNG (VARIANTS) ---
-  const addVariant = () => {
-    setFormData({
-      ...formData,
-      variants: [
-        ...formData.variants,
-        { sku: "", name: "", price: 0, salePrice: 0, stock: 0 },
-      ],
-    });
-  };
-  const removeVariant = (index) => {
-    const newVar = [...formData.variants];
-    newVar.splice(index, 1);
-    setFormData({ ...formData, variants: newVar });
-  };
-  const handleVariantChange = (index, field, val) => {
-    const newVar = [...formData.variants];
-    newVar[index][field] =
-      field.includes("price") || field.includes("salePrice") || field === "stock"
-        ? Number(val)
-        : val;
-    setFormData({ ...formData, variants: newVar });
-  };
-
-  // --- XỬ LÝ UPLOAD ẢNH CHUNG ---
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+    if (!files.length) return;
+
     setUploading(true);
     try {
       const uploadedUrls = [];
       for (const file of files) {
         const res = await uploadApi.uploadImage(file);
-        if (res && res.success) uploadedUrls.push(res.data.url);
-        else alert("Không thể upload ảnh: " + (res.message || "Lỗi server"));
+        if (res.success) uploadedUrls.push(res.data.url);
       }
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...uploadedUrls],
-      }));
+      setFormData({
+        ...formData,
+        images: [...formData.images, ...uploadedUrls],
+      });
     } catch (error) {
-      alert("Lỗi kết nối mạng hoặc server không phản hồi.");
+      alert("Lỗi upload ảnh: " + error.message);
     } finally {
       setUploading(false);
-      e.target.value = null;
     }
   };
 
@@ -169,41 +145,48 @@ const AdminProducts = () => {
     setFormData({ ...formData, images: newImages });
   };
 
-  const handleSubmit = async () => {
-    try {
-      // Ép kiểu Tags từ Chuỗi thành Mảng trước khi gửi xuống Backend
-      const processedData = {
-        ...formData,
-        tags: formData.tags
-          ? formData.tags
-              .split(",")
-              .map((t) => t.trim())
-              .filter((t) => t !== "")
-          : [],
-      };
-
-      if (isEditing) await adminProductApi.update(currentId, processedData);
-      else await adminProductApi.create(processedData);
-
-      setShowModal(false);
-      fetchData();
-    } catch (error) {
-      alert("Lỗi lưu sản phẩm: " + error.message);
-    }
+  const addAttribute = () => {
+    setFormData({
+      ...formData,
+      attributes: [...formData.attributes, { key: "", value: "" }],
+    });
   };
 
-  const handleDelete = async () => {
-    try {
-      await adminProductApi.delete(currentId);
-      setShowDeleteModal(false);
-      fetchData();
-    } catch (error) {
-      alert("Lỗi xóa sản phẩm: " + error.message);
-    }
+  const updateAttribute = (index, field, value) => {
+    const newAttributes = [...formData.attributes];
+    newAttributes[index][field] = value;
+    setFormData({ ...formData, attributes: newAttributes });
   };
 
-  const openCreateModal = () => {
-    setIsEditing(false);
+  const removeAttribute = (index) => {
+    const newAttributes = [...formData.attributes];
+    newAttributes.splice(index, 1);
+    setFormData({ ...formData, attributes: newAttributes });
+  };
+
+  const addVariant = () => {
+    setFormData({
+      ...formData,
+      variants: [
+        ...formData.variants,
+        { sku: "", name: "", price: 0, salePrice: 0, stock: 0, images: [] },
+      ],
+    });
+  };
+
+  const updateVariant = (index, field, value) => {
+    const newVariants = [...formData.variants];
+    newVariants[index][field] = value;
+    setFormData({ ...formData, variants: newVariants });
+  };
+
+  const removeVariant = (index) => {
+    const newVariants = [...formData.variants];
+    newVariants.splice(index, 1);
+    setFormData({ ...formData, variants: newVariants });
+  };
+
+  const handleAddNew = () => {
     setFormData({
       name: "",
       slug: "",
@@ -213,175 +196,284 @@ const AdminProducts = () => {
       basePrice: 0,
       salePrice: 0,
       stock: 0,
-      images: [],
-      shortDescription: "",
       description: "",
+      shortDescription: "",
+      images: [],
       tags: "",
-      attributes: [],
-      variants: [],
       isActive: true,
       isFeatured: false,
+      isNew: false,
       isBestSeller: false,
+      inStock: true,
+      variants: [],
+      attributes: [],
     });
+    setIsEditing(false);
     setShowModal(true);
   };
 
-  const openEditModal = (prod) => {
-    setIsEditing(true);
+  const handleEdit = (prod) => {
     setCurrentId(prod.id || prod._id);
     setFormData({
-      ...prod,
+      name: prod.name || "",
+      slug: prod.slug || "",
+      sku: prod.sku || "",
+      categoryId: prod.categoryId || prod.category_id || "",
+      brandId: prod.brandId || prod.brand_id || "",
+      basePrice: prod.basePrice || prod.base_price || 0,
+      salePrice: prod.salePrice || prod.sale_price || 0,
+      stock: prod.stock || 0,
+      description: prod.description || "",
+      shortDescription: prod.shortDescription || prod.short_description || "",
       images: prod.images || [],
-      attributes: prod.attributes || [],
-      variants: prod.variants || [],
-      // Decode mảng tags thành chuỗi để dễ sửa
-      tags: prod.tags && Array.isArray(prod.tags) ? prod.tags.join(", ") : "",
+      tags: prod.tags ? prod.tags.join(", ") : "",
+      isActive: prod.isActive !== undefined ? prod.isActive : true,
+      isFeatured: prod.isFeatured || false,
+      isNew: prod.isNew || false,
+      isBestSeller: prod.isBestSeller || false,
+      inStock: prod.inStock !== undefined ? prod.inStock : true,
+      // 🌟 Lấy thuộc tính và xử lý an toàn
+      attributes: Array.isArray(prod.attributes)
+        ? prod.attributes.map((a) => ({
+            key: a.key || "",
+            value: a.value || "",
+          }))
+        : [],
+      variants: prod.variants
+        ? prod.variants.map((v) => ({
+            ...v,
+            salePrice: v.salePrice || v.sale_price || 0,
+          }))
+        : [],
     });
+    setIsEditing(true);
     setShowModal(true);
+  };
+
+  const handleDeleteClick = (prod) => {
+    setCurrentId(prod.id || prod._id);
+    setShowDeleteModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.slug || !formData.basePrice) {
+      alert("Vui lòng điền các trường bắt buộc (Tên, Slug, Giá gốc)!");
+      return;
+    }
+
+    // 🌟 ÉP KIỂU STRING ĐỂ CHUẨN HÓA THUỘC TÍNH VÀ LOẠI BỎ RỖNG
+    const validAttributes = formData.attributes
+      .filter((attr) => attr.key.trim() !== "" && attr.value.trim() !== "")
+      .map((attr) => ({
+        key: String(attr.key).trim(),
+        value: String(attr.value).trim(),
+      }));
+
+    const validVariants = [];
+    for (let i = 0; i < formData.variants.length; i++) {
+      const v = formData.variants[i];
+      if (!v.name.trim()) {
+        alert(
+          `Vui lòng nhập "Tên" cho phân loại thứ ${i + 1} (VD: 50ml, Màu đỏ).`,
+        );
+        return;
+      }
+      let autoSku = v.sku.trim();
+      if (!autoSku) {
+        const prefix = formData.sku
+          ? formData.sku.trim()
+          : formData.slug.substring(0, 10).toUpperCase();
+        const suffix = generateSlug(v.name).toUpperCase();
+        autoSku = `${prefix}-${suffix}`;
+      }
+      validVariants.push({
+        sku: autoSku,
+        name: v.name.trim(),
+        price: Number(v.price) || 0,
+        sale_price: Number(v.salePrice) || 0,
+        stock: Number(v.stock) || 0,
+        images: v.images || [],
+      });
+    }
+
+    try {
+      const payload = {
+        name: formData.name,
+        slug: formData.slug,
+        sku: formData.sku,
+        category_id: formData.categoryId ? formData.categoryId : null,
+        brand_id: formData.brandId ? formData.brandId : null,
+        base_price: Number(formData.basePrice),
+        sale_price: Number(formData.salePrice),
+        stock: Number(formData.stock),
+        description: formData.description,
+        short_description: formData.shortDescription,
+        images: formData.images,
+        tags: formData.tags
+          ? formData.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter((t) => t)
+          : [],
+        attributes: validAttributes, // Gửi mảng lên
+        is_active: formData.isActive,
+        is_featured: formData.isFeatured,
+        is_new_product: formData.isNew,
+        is_best_seller: formData.isBestSeller,
+        in_stock: formData.inStock,
+        variants: validVariants,
+      };
+
+      let res;
+      if (isEditing) {
+        res = await adminProductApi.update(currentId, payload);
+      } else {
+        res = await adminProductApi.create(payload);
+      }
+
+      if (res.success) {
+        setShowModal(false);
+        fetchData(page);
+      }
+    } catch (error) {
+      alert("Lỗi lưu sản phẩm: " + error.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const res = await adminProductApi.delete(currentId);
+      if (res.success) {
+        setShowDeleteModal(false);
+        fetchData(page);
+      }
+    } catch (error) {
+      alert("Lỗi xóa sản phẩm: " + error.message);
+    }
   };
 
   const columns = [
     {
-      header: "Sản phẩm",
+      header: "Hình ảnh",
       render: (row) => (
-        <div className="d-flex align-items-center gap-3">
-          <img
-            src={row.images?.[0] || "https://via.placeholder.com/50"}
-            alt="sp"
+        <img
+          src={
+            row.images && row.images.length > 0
+              ? row.images[0]
+              : "https://via.placeholder.com/50"
+          }
+          alt={row.name}
+          style={{
+            width: "50px",
+            height: "50px",
+            objectFit: "cover",
+            borderRadius: "6px",
+          }}
+        />
+      ),
+    },
+    {
+      header: "Tên sản phẩm",
+      render: (row) => (
+        <div>
+          <div
+            className="fw-medium text-wrap"
             style={{
-              width: "50px",
-              height: "50px",
-              objectFit: "cover",
-              borderRadius: "5px",
+              maxWidth: "250px",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
             }}
-          />
-          <div>
-            <div
-              className="fw-bold"
-              style={{
-                maxWidth: "200px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-              title={row.name}
-            >
-              {row.name}
-            </div>
-            <div className="text-muted small">SKU: {row.sku || "N/A"}</div>
-            {row.variants && row.variants.length > 0 && (
-              <span className="badge bg-info mt-1">
-                {row.variants.length} phân loại
-              </span>
-            )}
+          >
+            {row.name}
           </div>
+          <small className="text-muted">
+            Thương hiệu:{" "}
+            {brands.find((b) => b.id === row.brandId || b._id === row.brandId)
+              ?.name || "Không có"}
+          </small>
         </div>
       ),
     },
     {
       header: "Giá bán",
-      render: (row) => (
-        <div>
-          {row.salePrice > 0 ? (
-            <>
-              <span className="text-danger fw-bold">
-                {row.salePrice.toLocaleString()}đ
-              </span>{" "}
-              <br />
-              <del className="text-muted small">
-                {row.basePrice?.toLocaleString()}đ
-              </del>
-            </>
-          ) : (
-            <span className="fw-bold">{row.basePrice?.toLocaleString()}đ</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      header: "Thương hiệu",
-      render: (row) =>
-        brands.find((b) => b.id === row.brandId)?.name || row.brandId,
-    },
-    {
-      header: "Tồn kho",
       render: (row) => {
-        const stock = row.stock != null ? row.stock : 0;
-        const isLow = stock > 0 && stock <= 5;
+        const basePrice = row.basePrice || row.base_price || 0;
+        const salePrice = row.salePrice || row.sale_price || 0;
+
         return (
-          <div className="d-flex flex-column gap-1">
-            <span
-              className={`admin-badge admin-badge-${stock > 0 ? (isLow ? 'warning' : 'success') : 'danger'} text-center fw-bold`}
-            >
-              {stock > 0 ? stock : 'Hết hàng'}
-            </span>
-            {isLow && (
-              <span className="text-danger small fw-medium text-center">
-                <i className="bi bi-exclamation-triangle me-1"></i>Sắp hết
+          <div className="d-flex flex-column">
+            {salePrice > 0 ? (
+              <>
+                <span className="text-danger fw-bold">
+                  {salePrice.toLocaleString()}đ
+                </span>
+                <del className="text-muted small">
+                  {basePrice.toLocaleString()}đ
+                </del>
+              </>
+            ) : (
+              <span className="text-danger fw-bold">
+                {basePrice.toLocaleString()}đ
               </span>
             )}
           </div>
         );
       },
     },
+    { field: "stock", header: "Tồn kho" },
     {
       header: "Trạng thái",
       render: (row) => (
-        <div className="d-flex flex-column gap-1">
-          {!row.isActive && (
-            <span className="admin-badge admin-badge-secondary text-center">
-              Đang ẩn
-            </span>
-          )}
-        </div>
+        <span
+          className={`badge ${row.isActive ? "bg-success" : "bg-secondary"}`}
+        >
+          {row.isActive ? "Đang bán" : "Ngừng bán"}
+        </span>
       ),
     },
     {
-      header: "Hành động",
+      header: "Thao tác",
       render: (row) => (
         <div className="d-flex gap-2">
           <button
-            className="btn btn-sm btn-light border"
-            onClick={() => openEditModal(row)}
+            className="btn btn-sm btn-outline-primary"
+            onClick={() => handleEdit(row)}
+            title="Sửa"
           >
-            <i className="bi bi-pencil text-primary"></i>
+            <i className="bi bi-pencil"></i>
           </button>
           <button
-            className="btn btn-sm btn-light border"
-            onClick={() => {
-              setCurrentId(row.id || row._id);
-              setShowDeleteModal(true);
-            }}
+            className="btn btn-sm btn-outline-danger"
+            onClick={() => handleDeleteClick(row)}
+            title="Xóa"
           >
-            <i className="bi bi-trash text-danger"></i>
+            <i className="bi bi-trash"></i>
           </button>
         </div>
       ),
     },
   ];
 
-  if (loading && products.length === 0)
+  if (loading && products.length === 0) {
     return (
       <AdminLayout>
-        <Loading message="Đang tải sản phẩm..." />
+        <Loading message="Đang tải dữ liệu sản phẩm..." />
       </AdminLayout>
     );
+  }
 
   return (
     <AdminLayout>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h4 className="fw-bold mb-1">Quản lý Sản phẩm</h4>
-          <p className="text-muted mb-0">
-            Quản lý thông tin, phân loại và giá bán
-          </p>
+          <p className="text-muted mb-0">Thêm, sửa, xóa và quản lý kho hàng</p>
         </div>
-        <button
-          className="btn text-white fw-medium px-4 py-2"
-          style={{ background: "var(--admin-gradient-success)" }}
-          onClick={openCreateModal}
-        >
-          <i className="bi bi-plus-lg me-2"></i>Thêm Sản phẩm
+        <button className="btn btn-success" onClick={handleAddNew}>
+          <i className="bi bi-plus-lg me-2"></i>Thêm Sản Phẩm
         </button>
       </div>
 
@@ -390,29 +482,28 @@ const AdminProducts = () => {
         data={products}
         emptyMessage="Chưa có sản phẩm nào."
       />
-      <Pagination
-        page={page - 1}
-        totalPages={totalPages}
-        onPageChange={(p) => setPage(p + 1)}
-      />
 
-      {/* MODAL BỰ CHỨA FORM */}
+      {totalPages > 1 && (
+        <Pagination
+          page={page - 1}
+          totalPages={totalPages}
+          onPageChange={(p) => setPage(p + 1)}
+        />
+      )}
+
       <Modal
         show={showModal}
-        title={isEditing ? "Sửa Sản Phẩm" : "Thêm Sản Phẩm Mới"}
+        title={isEditing ? "Cập nhật Sản Phẩm" : "Thêm Sản Phẩm Mới"}
         onClose={() => setShowModal(false)}
         onConfirm={handleSubmit}
-        confirmText="Lưu Sản Phẩm"
+        confirmText={isEditing ? "Lưu thay đổi" : "Tạo Sản Phẩm"}
+        confirmVariant="success"
         size="xl"
       >
-        <div
-          className="row g-3"
-          style={{ maxHeight: "70vh", overflowY: "auto", overflowX: "hidden" }}
-        >
-          {/* ================= CỘT TRÁI ================= */}
-          <div className="col-md-7 border-end pe-3">
-            <h6 className="fw-bold mb-3 border-bottom pb-2 text-primary">
-              1. Thông tin cơ bản
+        <div className="row">
+          <div className="col-md-8 border-end pe-4">
+            <h6 className="fw-bold text-primary mb-3">
+              <i className="bi bi-info-circle me-2"></i>Thông tin cơ bản
             </h6>
             <div className="mb-3">
               <label className="form-label small fw-medium">
@@ -425,9 +516,12 @@ const AdminProducts = () => {
                 onChange={handleNameChange}
               />
             </div>
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <label className="form-label small fw-medium">Slug</label>
+
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <label className="form-label small fw-medium">
+                  Slug <span className="text-danger">*</span>
+                </label>
                 <input
                   type="text"
                   className="form-control"
@@ -437,9 +531,9 @@ const AdminProducts = () => {
                   }
                 />
               </div>
-              <div className="col-md-6 mb-3">
+              <div className="col-md-6">
                 <label className="form-label small fw-medium">
-                  Mã SP chung (SKU)
+                  Mã SKU (Sản phẩm cha)
                 </label>
                 <input
                   type="text"
@@ -451,11 +545,10 @@ const AdminProducts = () => {
                 />
               </div>
             </div>
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <label className="form-label small fw-medium">
-                  Danh mục <span className="text-danger">*</span>
-                </label>
+
+            <div className="row mb-3">
+              <div className="col-md-6">
+                <label className="form-label small fw-medium">Danh mục</label>
                 <select
                   className="form-select"
                   value={formData.categoryId}
@@ -471,9 +564,9 @@ const AdminProducts = () => {
                   ))}
                 </select>
               </div>
-              <div className="col-md-6 mb-3">
+              <div className="col-md-6">
                 <label className="form-label small fw-medium">
-                  Thương hiệu <span className="text-danger">*</span>
+                  Thương hiệu
                 </label>
                 <select
                   className="form-select"
@@ -491,24 +584,51 @@ const AdminProducts = () => {
                 </select>
               </div>
             </div>
-            <div className="mb-3">
-              <label className="form-label small fw-medium">
-                Tags (Cách nhau dấu phẩy)
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="VD: bestseller, k-beauty, da-mun"
-                value={formData.tags}
-                onChange={(e) =>
-                  setFormData({ ...formData, tags: e.target.value })
-                }
-              />
+
+            <div className="row mb-3">
+              <div className="col-md-4">
+                <label className="form-label small fw-medium">
+                  Giá gốc (VNĐ) <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={formData.basePrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, basePrice: e.target.value })
+                  }
+                />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label small fw-medium">
+                  Giá khuyến mãi (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={formData.salePrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, salePrice: e.target.value })
+                  }
+                />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label small fw-medium">
+                  Tồn kho chung
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  value={formData.stock}
+                  onChange={(e) =>
+                    setFormData({ ...formData, stock: e.target.value })
+                  }
+                />
+              </div>
             </div>
+
             <div className="mb-3">
-              <label className="form-label small fw-medium">
-                Tóm tắt sản phẩm
-              </label>
+              <label className="form-label small fw-medium">Mô tả ngắn</label>
               <textarea
                 className="form-control"
                 rows="2"
@@ -518,9 +638,10 @@ const AdminProducts = () => {
                 }
               ></textarea>
             </div>
-            <div className="mb-3">
+
+            <div className="mb-4">
               <label className="form-label small fw-medium">
-                Mô tả chi tiết (Hỗ trợ HTML)
+                Mô tả chi tiết
               </label>
               <textarea
                 className="form-control"
@@ -532,239 +653,192 @@ const AdminProducts = () => {
               ></textarea>
             </div>
 
-            {/* DYNAMIC FORM: THUỘC TÍNH */}
-            <div className="mt-4">
-              <div className="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                <h6 className="fw-bold mb-0 text-primary">
-                  2. Thuộc tính chi tiết (Attributes)
-                </h6>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={addAttribute}
-                >
-                  <i className="bi bi-plus"></i> Thêm
-                </button>
+            <hr className="my-4" />
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="fw-bold text-info mb-0">
+                <i className="bi bi-list-ul me-2"></i>Thuộc tính chi tiết
+              </h6>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-info"
+                onClick={addAttribute}
+              >
+                <i className="bi bi-plus me-1"></i>Thêm thuộc tính
+              </button>
+            </div>
+
+            {formData.attributes.length === 0 ? (
+              <div className="text-muted small fst-italic mb-3">
+                Sản phẩm chưa có thuộc tính nào (Ví dụ: Xuất xứ, Thành phần).
               </div>
-              {formData.attributes.map((attr, index) => (
+            ) : (
+              formData.attributes.map((attr, idx) => (
                 <div
-                  key={index}
+                  key={idx}
                   className="row g-2 mb-2 align-items-center bg-light p-2 rounded"
                 >
-                  <div className="col-4">
+                  <div className="col-md-4">
                     <input
                       type="text"
                       className="form-control form-control-sm"
-                      placeholder="Tên (VD: Thành phần)"
+                      placeholder="Tên (VD: Xuất xứ)"
                       value={attr.key}
                       onChange={(e) =>
-                        handleAttributeChange(index, "key", e.target.value)
+                        updateAttribute(idx, "key", e.target.value)
                       }
                     />
                   </div>
-                  <div className="col-7">
+                  <div className="col-md-7">
                     <input
                       type="text"
                       className="form-control form-control-sm"
-                      placeholder="Giá trị (VD: Water, Glycerin...)"
+                      placeholder="Giá trị (VD: Hàn Quốc)"
                       value={attr.value}
                       onChange={(e) =>
-                        handleAttributeChange(index, "value", e.target.value)
+                        updateAttribute(idx, "value", e.target.value)
                       }
                     />
                   </div>
-                  <div className="col-1 text-end">
+                  <div className="col-md-1 text-end">
                     <button
                       type="button"
                       className="btn btn-sm btn-danger px-2 py-1"
-                      onClick={() => removeAttribute(index)}
+                      onClick={() => removeAttribute(idx)}
                     >
                       <i className="bi bi-trash"></i>
                     </button>
                   </div>
                 </div>
-              ))}
-              {formData.attributes.length === 0 && (
-                <p className="text-muted small fst-italic">
-                  Chưa có thuộc tính nào.
-                </p>
-              )}
-            </div>
-          </div>
+              ))
+            )}
 
-          {/* ================= CỘT PHẢI ================= */}
-          <div className="col-md-5 ps-3">
-            <h6 className="fw-bold mb-3 border-bottom pb-2 text-primary">
-              3. Giá mặc định & Hình ảnh
-            </h6>
-            <div className="row">
-              <div className="col-4 mb-3">
-                <label className="form-label small fw-medium">
-                  Giá gốc chung (VNĐ) <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="number"
-                  className="form-control"
-                  value={formData.basePrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      basePrice: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="col-4 mb-3">
-                <label className="form-label small fw-medium">
-                  Giá Sale chung
-                </label>
-                <input
-                  type="number"
-                  className="form-control text-danger fw-bold"
-                  value={formData.salePrice}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      salePrice: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="col-4 mb-3">
-                <label className="form-label small fw-medium">
-                  Tồn kho chung <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="number"
-                  className="form-control fw-bold"
-                  value={formData.stock}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      stock: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
+            <hr className="my-4" />
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="fw-bold text-success mb-0">
+                <i className="bi bi-diagram-2 me-2"></i>Các phân loại (Variants)
+              </h6>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-success"
+                onClick={addVariant}
+              >
+                <i className="bi bi-plus me-1"></i>Thêm phân loại
+              </button>
             </div>
 
-            <ImageUpload
-              images={formData.images}
-              onUpload={handleImageUpload}
-              onRemove={removeImage}
-              uploading={uploading}
-            />
-
-            {/* DYNAMIC FORM: BIẾN THỂ */}
-            <div className="mt-4">
-              <div className="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                <h6 className="fw-bold mb-0 text-primary">
-                  4. Phân loại (Variants)
-                </h6>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-success"
-                  onClick={addVariant}
-                >
-                  <i className="bi bi-plus"></i> Thêm loại
-                </button>
+            {formData.variants.length === 0 ? (
+              <div className="text-muted small fst-italic mb-3">
+                Sản phẩm này không có phân loại (Ví dụ: Chỉ có 1 dung tích duy
+                nhất).
               </div>
-              {formData.variants.map((v, index) => (
+            ) : (
+              formData.variants.map((v, idx) => (
                 <div
-                  key={index}
-                  className="bg-light p-2 mb-3 rounded border border-success border-opacity-25"
+                  key={idx}
+                  className="bg-light p-3 rounded mb-3 border position-relative"
                 >
-                  <div className="d-flex justify-content-between mb-2">
-                    <span className="fw-bold small">
-                      Phân loại #{index + 1}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-danger p-0 px-1"
-                      onClick={() => removeVariant(index)}
-                    >
-                      <i className="bi bi-x"></i> Bỏ
-                    </button>
-                  </div>
-                  <div className="row g-2 mb-2">
-                    <div className="col-4">
+                  <button
+                    type="button"
+                    className="btn-close position-absolute top-0 end-0 m-2"
+                    onClick={() => removeVariant(idx)}
+                  ></button>
+                  <div className="row g-2">
+                    <div className="col-md-6">
+                      <label className="form-label small mb-1">
+                        Tên (VD: 50ml, Đỏ){" "}
+                        <span className="text-danger">*</span>
+                      </label>
                       <input
                         type="text"
                         className="form-control form-control-sm"
-                        placeholder="Mã SKU riêng"
-                        value={v.sku}
-                        onChange={(e) =>
-                          handleVariantChange(index, "sku", e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="col-8">
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        placeholder="Tên (VD: 50ml, Đỏ)"
                         value={v.name}
                         onChange={(e) =>
-                          handleVariantChange(index, "name", e.target.value)
+                          updateVariant(idx, "name", e.target.value)
                         }
                       />
                     </div>
-                  </div>
-                  <div className="row g-2">
-                    <div className="col-4">
+                    <div className="col-md-6">
+                      <label className="form-label small mb-1">
+                        SKU (Mã tự động sinh nếu trống)
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control form-control-sm"
+                        value={v.sku}
+                        onChange={(e) =>
+                          updateVariant(idx, "sku", e.target.value)
+                        }
+                        placeholder="Tự động..."
+                      />
+                    </div>
+                    <div className="col-md-4">
+                      <label className="form-label small mb-1">Giá gốc</label>
                       <input
                         type="number"
                         className="form-control form-control-sm"
-                        placeholder="Giá gốc"
                         value={v.price}
                         onChange={(e) =>
-                          handleVariantChange(index, "price", e.target.value)
+                          updateVariant(idx, "price", e.target.value)
                         }
                       />
                     </div>
-                    <div className="col-4">
+                    <div className="col-md-4">
+                      <label className="form-label small mb-1">Giá Sale</label>
                       <input
                         type="number"
-                        className="form-control form-control-sm text-danger fw-bold"
-                        placeholder="Giá Sale"
+                        className="form-control form-control-sm"
                         value={v.salePrice}
                         onChange={(e) =>
-                          handleVariantChange(
-                            index,
-                            "salePrice",
-                            e.target.value,
-                          )
+                          updateVariant(idx, "salePrice", e.target.value)
                         }
                       />
                     </div>
-                    <div className="col-4">
+                    <div className="col-md-4">
+                      <label className="form-label small mb-1">Kho</label>
                       <input
                         type="number"
-                        className="form-control form-control-sm fw-bold"
-                        placeholder="Tồn kho"
+                        className="form-control form-control-sm"
                         value={v.stock}
                         onChange={(e) =>
-                          handleVariantChange(
-                            index,
-                            "stock",
-                            e.target.value,
-                          )
+                          updateVariant(idx, "stock", e.target.value)
                         }
                       />
                     </div>
                   </div>
                 </div>
-              ))}
-              {formData.variants.length === 0 && (
-                <p className="text-muted small fst-italic">
-                  Sản phẩm này không có nhiều phân loại.
-                </p>
-              )}
+              ))
+            )}
+          </div>
+
+          <div className="col-md-4 ps-md-4">
+            <h6 className="fw-bold text-primary mb-3">
+              <i className="bi bi-images me-2"></i>Hình ảnh & Cấu hình
+            </h6>
+            <ImageUpload
+              images={formData.images}
+              onUpload={handleImageUpload}
+              onRemove={removeImage}
+              uploading={uploading}
+              multiple={true}
+            />
+
+            <div className="mb-4 mt-3">
+              <label className="form-label small fw-medium">
+                Tags (Cách nhau bằng dấu phẩy)
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="VD: tri-mun, da-dau, auth"
+                value={formData.tags}
+                onChange={(e) =>
+                  setFormData({ ...formData, tags: e.target.value })
+                }
+              />
             </div>
 
-            <h6 className="fw-bold mb-2 mt-4 border-bottom pb-2 text-primary">
-              5. Trạng thái (Flags)
-            </h6>
+            <hr />
+            <h6 className="fw-bold small mb-3">Trạng thái hiển thị</h6>
             <div className="form-check form-switch mb-2">
               <input
                 className="form-check-input"
@@ -774,8 +848,37 @@ const AdminProducts = () => {
                   setFormData({ ...formData, isActive: e.target.checked })
                 }
               />
-              <label className="form-check-label small">
-                Hiển thị trên website
+              <label className="form-check-label small fw-medium">
+                Kích hoạt (Đang bán)
+              </label>
+            </div>
+            <div className="form-check form-switch mb-2">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={formData.inStock}
+                onChange={(e) =>
+                  setFormData({ ...formData, inStock: e.target.checked })
+                }
+              />
+              <label className="form-check-label small fw-medium">
+                Còn hàng
+              </label>
+            </div>
+
+            <hr />
+            <h6 className="fw-bold small mb-3">Nhãn (Badge) Trang chủ</h6>
+            <div className="form-check form-switch mb-2">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={formData.isNew}
+                onChange={(e) =>
+                  setFormData({ ...formData, isNew: e.target.checked })
+                }
+              />
+              <label className="form-check-label small text-info fw-medium">
+                Sản phẩm Mới (New)
               </label>
             </div>
             <div className="form-check form-switch mb-2">
@@ -788,10 +891,10 @@ const AdminProducts = () => {
                 }
               />
               <label className="form-check-label small text-primary fw-medium">
-                Sản phẩm nổi bật (Trang chủ)
+                Nổi bật (Featured)
               </label>
             </div>
-            <div className="form-check form-switch">
+            <div className="form-check form-switch mb-2">
               <input
                 className="form-check-input"
                 type="checkbox"
@@ -800,8 +903,8 @@ const AdminProducts = () => {
                   setFormData({ ...formData, isBestSeller: e.target.checked })
                 }
               />
-              <label className="form-check-label small text-success fw-medium">
-                Bán chạy (Trang chủ)
+              <label className="form-check-label small text-danger fw-medium">
+                Bán chạy (Best Seller)
               </label>
             </div>
           </div>
