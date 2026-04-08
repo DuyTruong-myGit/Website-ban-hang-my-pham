@@ -38,7 +38,7 @@ const WishlistPage = () => {
     const handleRemove = async (productId) => {
         try {
             await wishlistApi.removeFromWishlist(productId);
-            setItems(prev => prev.filter(item => item.productId !== productId));
+            setItems(prev => prev.filter(item => item.id !== productId));
             setMessage({ type: 'success', text: 'Đã xóa khỏi yêu thích.' });
         } catch (err) {
             setMessage({ type: 'danger', text: 'Lỗi xóa sản phẩm.' });
@@ -95,7 +95,7 @@ const WishlistPage = () => {
                     ) : (
                         <Row>
                             {items.map((item) => {
-                                const product = item.product;
+                                const product = item;
                                 if (!product) return null;
                                 const displayPrice = product.salePrice > 0 ? product.salePrice : product.basePrice;
                                 const hasDiscount = product.salePrice > 0 && product.salePrice < product.basePrice;
@@ -111,7 +111,7 @@ const WishlistPage = () => {
                                             <button
                                                 className="btn btn-sm position-absolute top-0 end-0 m-2 z-1"
                                                 style={{ background: 'rgba(255,255,255,0.9)', borderRadius: '50%', width: 32, height: 32 }}
-                                                onClick={() => handleRemove(item.productId)}
+                                                onClick={() => handleRemove(item.id)}
                                                 title="Xóa khỏi yêu thích">
                                                 <i className="bi bi-x text-danger"></i>
                                             </button>

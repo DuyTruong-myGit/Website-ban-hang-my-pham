@@ -5,31 +5,35 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
-// Import Routes
+// ── Import Routes — TV1 (Auth & User) ───────────────────────────────────
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
+
+// ── Import Routes — TV2 (Sản phẩm & Danh mục) ─────────────────────────
 import brandRoutes from "./routes/brandRoutes.js";
 import bannerRoutes from "./routes/bannerRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
-import reportRoutes from "./routes/reportRoutes.js";
-// Import Routes — TV1 (Auth & User)
-import authRoutes from './routes/authRoutes.js';
-import userRoutes from './routes/userRoutes.js';
-import uploadRoutes from './routes/uploadRoutes.js';
 
-// Import Routes — TV5 (Admin Dashboard & Quản lý)
-import reportRoutes from './routes/reportRoutes.js';
-import adminLogRoutes from './routes/adminLogRoutes.js';
-import pageContentRoutes, { pageAdminRoutes } from './routes/pageContentRoutes.js';
-import inventoryRoutes from './routes/inventoryRoutes.js';
+// ── Import Routes — TV3 (Cửa Hàng & Giỏ Hàng/Đơn Hàng & Thanh toán) ──
+import couponRoutes, { couponAdminRoutes } from "./routes/couponRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
+import orderRoutes, { orderAdminRoutes } from "./routes/orderRoutes.js";
+
+// ── Import Routes — TV5 (Admin Dashboard & Quản lý) ────────────────────
+import reportRoutes from "./routes/reportRoutes.js";
+import adminLogRoutes from "./routes/adminLogRoutes.js";
+import pageContentRoutes, { pageAdminRoutes } from "./routes/pageContentRoutes.js";
+import inventoryRoutes from "./routes/inventoryRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
+// ── Middleware ───────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
@@ -39,32 +43,40 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// Routes
+// ── Routes ──────────────────────────────────────────────────────────────
+
 app.get("/", (req, res) => {
   res.json({ message: "API AuraBeauty Node.js is running..." });
 });
 
+// --- TV1: Auth & User ---
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+
+// --- TV2: Sản phẩm & Danh mục ---
 app.use("/api/brands", brandRoutes);
 app.use("/api/banners", bannerRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/admin/reports", reportRoutes);
-// --- TV1: Auth & User ---
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/upload', uploadRoutes);
+
+// --- TV3: Cửa Hàng & Giỏ Hàng/Đơn Hàng & Thanh toán ---
+app.use("/api/coupons", couponRoutes);             // POST /validate, GET /available
+app.use("/api/admin/coupons", couponAdminRoutes);   // Admin CRUD
+app.use("/api/payments", paymentRoutes);             // GET /:orderId
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/admin/orders", orderAdminRoutes);
 
 // --- TV5: Admin Dashboard & Quản lý ---
-app.use('/api/admin/reports', reportRoutes);
-app.use('/api/admin/logs', adminLogRoutes);
-app.use('/api/pages', pageContentRoutes);          // Public: GET /api/pages/:slug
-app.use('/api/admin/pages', pageAdminRoutes);       // Admin: CRUD /api/admin/pages
-app.use('/api/admin/inventory', inventoryRoutes);
+app.use("/api/admin/reports", reportRoutes);
+app.use("/api/admin/logs", adminLogRoutes);
+app.use("/api/pages", pageContentRoutes);
+app.use("/api/admin/pages", pageAdminRoutes);
+app.use("/api/admin/inventory", inventoryRoutes);
 
-// Error Handling
+// ── Error Handling ──────────────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
 
