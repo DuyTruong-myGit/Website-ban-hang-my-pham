@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Form, Breadcrumb, Button } from "react-bootstrap";
+import { Container, Row, Col, Form, Breadcrumb, Button, Accordion, Badge } from "react-bootstrap";
 import { useSearchParams, Link } from "react-router-dom";
 import ProductGrid from "../components/common/ProductGrid";
 import Loading from "../components/common/Loading";
 import Pagination from "../components/common/Pagination";
 import usePageTitle from "../hooks/usePageTitle";
-import { productApi, brandApi } from "../services/customerService";
+import { productApi, brandApi, categoryApi } from "../services/customerService";
 
 const Search = () => {
   const [searchParams] = useSearchParams();
@@ -14,28 +14,48 @@ const Search = () => {
 
   const [products, setProducts] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Bộ lọc
+  // Mảng lọc nhiều cấu hình (Multi-select)
   const [sort, setSort] = useState(searchParams.get("sort") || "newest");
   const [priceRange, setPriceRange] = useState({ min: null, max: null });
-  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [minRating, setMinRating] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(false);
 
+  // States tạm thời cho input giá (để bấm nút áp dụng)
+  const [inputMinPrice, setInputMinPrice] = useState("");
+  const [inputMaxPrice, setInputMaxPrice] = useState("");
+
   useEffect(() => {
-    const fetchBrands = async () => {
+    const fetchMetadata = async () => {
       try {
-        const res = await brandApi.getAll();
-        if (res?.success) setBrands(res.data);
+        const [brandRes, catRes] = await Promise.all([
+           brandApi.getAll(),
+           categoryApi.getTree()
+        ]);
+        if (brandRes?.success) setBrands(brandRes.data);
+        if (catRes?.success) {
+            // Lấy tất cả category rải phẳng
+            let flatCats = [];
+            catRes.data.forEach(c => {
+                flatCats.push(c);
+                if (c.children && c.children.length > 0) {
+                    flatCats.push(...c.children);
+                }
+            });
+            setCategories(flatCats);
+        }
       } catch (error) {
-        console.error("Lỗi lấy thương hiệu:", error);
+        console.error("Lỗi lấy siêu dữ liệu lọc:", error);
       }
     };
-    fetchBrands();
+    fetchMetadata();
   }, []);
 
   useEffect(() => {
@@ -43,14 +63,15 @@ const Search = () => {
       setLoading(true);
       try {
         const params = {
-          search: keyword, // Truyền từ khóa tìm kiếm xuống Backend
+          search: keyword,
           page: page,
           limit: 12,
           sort: sort,
         };
         if (priceRange.min !== null) params.minPrice = priceRange.min;
         if (priceRange.max !== null) params.maxPrice = priceRange.max;
-        if (selectedBrand) params.brandId = selectedBrand;
+        if (selectedBrands.length > 0) params.brandId = selectedBrands.join(",");
+        if (selectedCategories.length > 0) params.categoryId = selectedCategories.join(",");
         if (minRating > 0) params.minRating = minRating;
         if (inStockOnly) params.inStock = true;
 
@@ -66,32 +87,51 @@ const Search = () => {
       }
     };
     fetchProducts();
-  }, [keyword, page, sort, priceRange, selectedBrand, minRating, inStockOnly]);
+  }, [keyword, page, sort, priceRange, selectedBrands, selectedCategories, minRating, inStockOnly]);
 
   // Reset page khi từ khóa thay đổi
   useEffect(() => {
     setPage(1);
   }, [keyword]);
 
-  const handlePriceChange = (min, max) => {
-    setPriceRange({ min, max });
-    setPage(1);
+  // === HANDLERS ===
+  const handleApplyCustomPrice = () => {
+     let min = inputMinPrice ? Number(inputMinPrice) : null;
+     let max = inputMaxPrice ? Number(inputMaxPrice) : null;
+     if (min !== null && max !== null && min > max) {
+         let temp = min; min = max; max = temp;
+     }
+     setPriceRange({ min, max });
+     setPage(1);
   };
-  const handleBrandChange = (brandId) => {
-    setSelectedBrand(brandId);
-    setPage(1);
+
+  const handleToggleArray = (value, array, setArray) => {
+      if (array.includes(value)) {
+          setArray(array.filter(v => v !== value));
+      } else {
+          setArray([...array, value]);
+      }
+      setPage(1);
   };
-  const handleRatingChange = (rating) => {
-    setMinRating(rating);
-    setPage(1);
-  };
+
   const clearFilters = () => {
     setPriceRange({ min: null, max: null });
-    setSelectedBrand("");
+    setSelectedBrands([]);
+    setSelectedCategories([]);
     setMinRating(0);
     setInStockOnly(false);
     setSort("newest");
+    setInputMinPrice("");
+    setInputMaxPrice("");
     setPage(1);
+  };
+
+  // === RENDER ACTIVE TAGS ===
+  const removePriceTag = () => {
+      setPriceRange({ min: null, max: null });
+      setInputMinPrice("");
+      setInputMaxPrice("");
+      setPage(1);
   };
 
   return (
@@ -105,179 +145,200 @@ const Search = () => {
         </Breadcrumb>
 
         <Row className="g-3">
-          {/* BỘ LỌC TƯƠNG TỰ TRANG DANH MỤC */}
+          {/* BỘ LỌC ACCORDION HIỆN ĐẠI */}
           <Col lg={3}>
-            <div className="bg-white p-3 rounded shadow-sm mb-3">
-              <div className="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <div className="bg-white rounded shadow-sm mb-3">
+              <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
                 <h6 className="fw-bold mb-0">
-                  <i className="bi bi-funnel me-2"></i>BỘ LỌC
+                  <i className="bi bi-funnel-fill me-2 text-hasaki"></i>BỘ LỌC
                 </h6>
-                <Button
-                  variant="link"
-                  className="text-danger p-0 text-decoration-none small"
-                  onClick={clearFilters}
-                >
-                  Xóa lọc
-                </Button>
+                <Button variant="link" className="text-danger p-0 text-decoration-none small" onClick={clearFilters}>Xóa lọc</Button>
               </div>
 
-              <h6 className="fw-bold mb-2 small text-muted">KHOẢNG GIÁ</h6>
-              <Form className="mb-4">
-                <Form.Check
-                  type="radio"
-                  id="price-all"
-                  label="Tất cả mức giá"
-                  name="price"
-                  checked={priceRange.min === null && priceRange.max === null}
-                  onChange={() => handlePriceChange(null, null)}
-                  className="mb-2 text-dark small"
-                />
-                <Form.Check
-                  type="radio"
-                  id="price-1"
-                  label="Dưới 100.000đ"
-                  name="price"
-                  checked={priceRange.min === 0 && priceRange.max === 100000}
-                  onChange={() => handlePriceChange(0, 100000)}
-                  className="mb-2 text-dark small"
-                />
-                <Form.Check
-                  type="radio"
-                  id="price-2"
-                  label="100.000đ - 300.000đ"
-                  name="price"
-                  checked={
-                    priceRange.min === 100000 && priceRange.max === 300000
-                  }
-                  onChange={() => handlePriceChange(100000, 300000)}
-                  className="mb-2 text-dark small"
-                />
-                <Form.Check
-                  type="radio"
-                  id="price-3"
-                  label="Trên 300.000đ"
-                  name="price"
-                  checked={
-                    priceRange.min === 300000 && priceRange.max === 99999999
-                  }
-                  onChange={() => handlePriceChange(300000, 99999999)}
-                  className="mb-2 text-dark small"
-                />
-              </Form>
+              {/* ACTIVE FILTER TAGS */}
+              {(selectedBrands.length > 0 || selectedCategories.length > 0 || inStockOnly || minRating > 0 || priceRange.min !== null || priceRange.max !== null) && (
+                <div className="p-3 border-bottom bg-light">
+                   <div className="small fw-bold text-muted mb-2">Đang lọc theo:</div>
+                   <div className="d-flex flex-wrap gap-2">
+                       {priceRange.min !== null || priceRange.max !== null ? (
+                          <Badge bg="secondary" className="d-flex align-items-center gap-1 cursor-pointer" onClick={removePriceTag}>
+                              Giá: {priceRange.min || 0}đ - {priceRange.max ? `${priceRange.max}đ` : 'Trở lên'} <i className="bi bi-x"></i>
+                          </Badge>
+                       ) : null}
+                       
+                       {selectedBrands.map(bId => {
+                           const bObj = brands.find(b => (b.id || b._id) === bId);
+                           return bObj ? (
+                               <Badge key={`b-${bId}`} bg="secondary" className="d-flex align-items-center gap-1 cursor-pointer" onClick={() => handleToggleArray(bId, selectedBrands, setSelectedBrands)}>
+                                   Hãng: {bObj.name} <i className="bi bi-x"></i>
+                               </Badge>
+                           ) : null;
+                       })}
 
-              <h6 className="fw-bold mb-2 small text-muted border-top pt-3">
-                THƯƠNG HIỆU
-              </h6>
-              <Form
-                className="mb-4"
-                style={{
-                  maxHeight: "150px",
-                  overflowY: "auto",
-                  scrollbarWidth: "thin",
-                }}
-              >
-                <Form.Check
-                  type="radio"
-                  label="Tất cả thương hiệu"
-                  name="brand"
-                  checked={selectedBrand === ""}
-                  onChange={() => handleBrandChange("")}
-                  className="mb-2 text-dark small"
-                />
-                {brands.map((b) => (
-                  <Form.Check
-                    key={b.id || b._id}
-                    type="radio"
-                    label={b.name}
-                    name="brand"
-                    checked={selectedBrand === (b.id || b._id)}
-                    onChange={() => handleBrandChange(b.id || b._id)}
-                    className="mb-2 text-dark small"
-                  />
-                ))}
-              </Form>
+                       {selectedCategories.map(cId => {
+                           const cObj = categories.find(c => (c.id || c._id) === cId);
+                           return cObj ? (
+                               <Badge key={`c-${cId}`} bg="secondary" className="d-flex align-items-center gap-1 cursor-pointer" onClick={() => handleToggleArray(cId, selectedCategories, setSelectedCategories)}>
+                                   Loại: {cObj.name} <i className="bi bi-x"></i>
+                               </Badge>
+                           ) : null;
+                       })}
 
-              <h6 className="fw-bold mb-2 small text-muted border-top pt-3">
-                ĐÁNH GIÁ TỪ KHÁCH HÀNG
-              </h6>
-              <Form className="mb-4">
-                <Form.Check
-                  type="radio"
-                  label="Tất cả đánh giá"
-                  name="rating"
-                  checked={minRating === 0}
-                  onChange={() => handleRatingChange(0)}
-                  className="mb-2 text-dark small"
-                />
-                <Form.Check
-                  type="radio"
-                  label={
-                    <>
-                      <i className="bi bi-star-fill text-warning"></i>
-                      <i className="bi bi-star-fill text-warning"></i>
-                      <i className="bi bi-star-fill text-warning"></i>
-                      <i className="bi bi-star-fill text-warning"></i>
-                      <i className="bi bi-star text-warning"></i> từ 4 sao
-                    </>
-                  }
-                  name="rating"
-                  checked={minRating === 4}
-                  onChange={() => handleRatingChange(4)}
-                  className="mb-2 text-dark small"
-                />
-                <Form.Check
-                  type="radio"
-                  label={
-                    <>
-                      <i className="bi bi-star-fill text-warning"></i>
-                      <i className="bi bi-star-fill text-warning"></i>
-                      <i className="bi bi-star-fill text-warning"></i>
-                      <i className="bi bi-star text-warning"></i>
-                      <i className="bi bi-star text-warning"></i> từ 3 sao
-                    </>
-                  }
-                  name="rating"
-                  checked={minRating === 3}
-                  onChange={() => handleRatingChange(3)}
-                  className="mb-2 text-dark small"
-                />
-              </Form>
+                       {minRating > 0 && (
+                          <Badge bg="secondary" className="d-flex align-items-center gap-1 cursor-pointer" onClick={() => { setMinRating(0); setPage(1); }}>
+                              Từ {minRating} sao <i className="bi bi-x"></i>
+                          </Badge>
+                       )}
 
-              <h6 className="fw-bold mb-2 small text-muted border-top pt-3">
-                TÌNH TRẠNG HÀNG
-              </h6>
-              <Form>
-                <Form.Check
-                  type="checkbox"
-                  label="Chỉ hiện sản phẩm Còn hàng"
-                  checked={inStockOnly}
-                  onChange={(e) => {
-                    setInStockOnly(e.target.checked);
-                    setPage(1);
-                  }}
-                  className="text-dark small"
-                />
-              </Form>
+                       {inStockOnly && (
+                           <Badge bg="secondary" className="d-flex align-items-center gap-1 cursor-pointer" onClick={() => { setInStockOnly(false); setPage(1); }}>
+                               Còn hàng <i className="bi bi-x"></i>
+                           </Badge>
+                       )}
+                   </div>
+                </div>
+              )}
+
+              {/* ACCORDIONS */}
+              <Accordion alwaysOpen defaultActiveKey={['0', '1', '2', '3']} className="filter-accordion border-0">
+                
+                <Accordion.Item eventKey="0" className="border-0 border-bottom rounded-0">
+                  <Accordion.Header className="py-0 fw-bold small text-muted">DANH MỤC</Accordion.Header>
+                  <Accordion.Body className="pt-0 pb-3" style={{ maxHeight: "200px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                    <Form>
+                       {categories.map((c) => (
+                          <Form.Check
+                            key={c.id || c._id}
+                            type="checkbox"
+                            label={c.name}
+                            checked={selectedCategories.includes(c.id || c._id)}
+                            onChange={() => handleToggleArray(c.id || c._id, selectedCategories, setSelectedCategories)}
+                            className="mb-2 text-dark small"
+                          />
+                        ))}
+                    </Form>
+                  </Accordion.Body>
+                </Accordion.Item>
+
+                <Accordion.Item eventKey="1" className="border-0 border-bottom rounded-0">
+                  <Accordion.Header>THƯƠNG HIỆU</Accordion.Header>
+                  <Accordion.Body className="pt-0 pb-3" style={{ maxHeight: "200px", overflowY: "auto", scrollbarWidth: "thin" }}>
+                     <Form>
+                        {brands.map((b) => (
+                           <Form.Check
+                             key={b.id || b._id}
+                             type="checkbox"
+                             label={b.name}
+                             checked={selectedBrands.includes(b.id || b._id)}
+                             onChange={() => handleToggleArray(b.id || b._id, selectedBrands, setSelectedBrands)}
+                             className="mb-2 text-dark small"
+                           />
+                         ))}
+                     </Form>
+                  </Accordion.Body>
+                </Accordion.Item>
+
+                <Accordion.Item eventKey="2" className="border-0 border-bottom rounded-0">
+                  <Accordion.Header>KHOẢNG GIÁ</Accordion.Header>
+                  <Accordion.Body className="pt-0 pb-3">
+                     <div className="d-flex gap-2 align-items-center mb-3">
+                        <Form.Control 
+                            type="number" 
+                            size="sm" 
+                            placeholder="Từ (đ)" 
+                            value={inputMinPrice}
+                            onChange={(e) => setInputMinPrice(e.target.value)}
+                        />
+                        <span className="text-muted">-</span>
+                        <Form.Control 
+                            type="number" 
+                            size="sm" 
+                            placeholder="Đến (đ)" 
+                            value={inputMaxPrice}
+                            onChange={(e) => setInputMaxPrice(e.target.value)}
+                        />
+                     </div>
+                     <Button variant="outline-success" size="sm" className="w-100 mb-3 fw-bold" onClick={handleApplyCustomPrice}>
+                        ÁP DỤNG
+                     </Button>
+                     <Form>
+                        <Form.Check
+                            type="radio" name="price" label="Dưới 100.000đ"
+                            checked={priceRange.min === 0 && priceRange.max === 100000}
+                            onChange={() => { setInputMinPrice(""); setInputMaxPrice(""); setPriceRange({ min: 0, max: 100000 }); setPage(1); }}
+                            className="mb-2 text-dark small"
+                        />
+                        <Form.Check
+                            type="radio" name="price" label="100.000đ - 300.000đ"
+                            checked={priceRange.min === 100000 && priceRange.max === 300000}
+                            onChange={() => { setInputMinPrice(""); setInputMaxPrice(""); setPriceRange({ min: 100000, max: 300000 }); setPage(1); }}
+                            className="mb-2 text-dark small"
+                        />
+                        <Form.Check
+                            type="radio" name="price" label="Trên 300.000đ"
+                            checked={priceRange.min === 300000 && priceRange.max === null}
+                            onChange={() => { setInputMinPrice(""); setInputMaxPrice(""); setPriceRange({ min: 300000, max: null }); setPage(1); }}
+                            className="mb-2 text-dark small"
+                        />
+                     </Form>
+                  </Accordion.Body>
+                </Accordion.Item>
+
+                <Accordion.Item eventKey="3" className="border-0 rounded-0">
+                  <Accordion.Header>TÌNH TRẠNG & ĐÁNH GIÁ</Accordion.Header>
+                  <Accordion.Body className="pt-0 pb-3">
+                    <Form>
+                      <Form.Check
+                        type="checkbox"
+                        label="Chỉ hiện sản phẩm Còn hàng"
+                        checked={inStockOnly}
+                        onChange={(e) => { setInStockOnly(e.target.checked); setPage(1); }}
+                        className="mb-3 text-dark fw-bold small text-success"
+                      />
+                      <hr className="my-2"/>
+                      <div className="small text-muted mb-2 mt-2">Sao tối thiểu:</div>
+                      <Form.Check
+                        type="radio" name="rating"
+                        label={<><i className="bi bi-star-fill text-warning"></i> từ 4 sao</>}
+                        checked={minRating === 4}
+                        onChange={() => { setMinRating(4); setPage(1); }}
+                        className="mb-2 text-dark small"
+                      />
+                      <Form.Check
+                        type="radio" name="rating"
+                        label={<><i className="bi bi-star-fill text-warning"></i> từ 3 sao</>}
+                        checked={minRating === 3}
+                        onChange={() => { setMinRating(3); setPage(1); }}
+                        className="mb-2 text-dark small"
+                      />
+                    </Form>
+                  </Accordion.Body>
+                </Accordion.Item>
+
+              </Accordion>
             </div>
+            
+            {/* Thêm chút border adjustment style */}
+            <style>{`.filter-accordion .accordion-button { font-size: 0.85rem; font-weight: 700; color: #555; background: #fff; padding: 1rem 1.25rem; box-shadow: none; border: none; }
+                     .filter-accordion .accordion-button:not(.collapsed) { background: #fdfdfd; color: #326e51; box-shadow: none; border: none; }
+                     .filter-accordion .accordion-button:focus { box-shadow: none; border: none; }
+            `}</style>
           </Col>
 
           {/* KẾT QUẢ TÌM KIẾM */}
           <Col lg={9}>
-            <div className="bg-white p-3 rounded shadow-sm mb-3 d-flex justify-content-between align-items-center">
+            <div className="bg-white p-3 rounded shadow-sm mb-3 d-flex flex-wrap gap-2 justify-content-between align-items-center">
               <h5 className="mb-0 fw-bold">
-                Kết quả tìm kiếm cho:{" "}
-                <span className="text-hasaki">"{keyword}"</span>
+                Tìm kiếm: <span className="text-hasaki">"{keyword}"</span> 
+                <span className="text-muted small ms-2 fw-normal">({totalPages > 0 ? 'Có sản phẩm' : 'Đang tìm'})</span>
               </h5>
               <div className="d-flex align-items-center gap-2">
                 <span className="text-muted small text-nowrap">Sắp xếp:</span>
                 <Form.Select
                   size="sm"
                   value={sort}
-                  onChange={(e) => {
-                    setSort(e.target.value);
-                    setPage(1);
-                  }}
-                  style={{ width: "180px" }}
+                  onChange={(e) => { setSort(e.target.value); setPage(1); }}
+                  style={{ width: "180px", cursor: 'pointer' }}
                 >
                   <option value="newest">Hàng mới nhất</option>
                   <option value="best_seller">Bán chạy nhất</option>
@@ -289,12 +350,12 @@ const Search = () => {
             </div>
 
             {loading ? (
-              <Loading message="Đang tìm kiếm..." />
+              <Loading message="Đang lọc sản phẩm..." />
             ) : (
               <>
                 <ProductGrid
                   products={products}
-                  emptyMessage={`Rất tiếc, không tìm thấy sản phẩm nào khớp với từ khóa "${keyword}".`}
+                  emptyMessage={`Rất tiếc, không tìm thấy sản phẩm nào khớp với điều kiện lọc hiện tại.`}
                 />
                 {products.length > 0 && (
                   <div className="mt-4">
