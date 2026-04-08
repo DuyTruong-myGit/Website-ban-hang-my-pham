@@ -24,7 +24,7 @@ const StaffChat = () => {
         sendMarkAsRead,
         subscribeToNewRooms,
         sendPresence,
-        stompClientRef,
+        subscribeToChatNotification,
     } = useChat();
 
     const [activeTab, setActiveTab] = useState('pending'); // pending, mine, closed
@@ -96,8 +96,7 @@ const StaffChat = () => {
     // ─── Subscribe notification channel cho staff: nhận unread updates ───────
 
     useEffect(() => {
-        const client = stompClientRef?.current;
-        if (!client || !connected || !userId) return;
+        if (!connected || !userId || !subscribeToChatNotification) return;
 
         // Hủy subscription cũ
         if (staffNotifSubRef.current) {
@@ -106,10 +105,8 @@ const StaffChat = () => {
         }
 
         // Subscribe vào channel notification cá nhân của staff
-        staffNotifSubRef.current = client.subscribe(
-            `/topic/user/${userId}/chat-notification`,
-            (frame) => {
-                const data = JSON.parse(frame.body);
+        staffNotifSubRef.current = subscribeToChatNotification(
+            (data) => {
                 const currentSelected = selectedRoomRef.current;
 
                 // Nếu tin nhắn thuộc phòng đang chọn → không tăng unread (vì đang xem)
@@ -142,7 +139,7 @@ const StaffChat = () => {
                 staffNotifSubRef.current = null;
             }
         };
-    }, [connected, userId]);
+    }, [connected, userId, subscribeToChatNotification]);
 
     // ─── Scroll xuống cuối ──────────────────────────────────────────────────
 
@@ -245,15 +242,17 @@ const StaffChat = () => {
         if (!content || !selectedRoom) return;
 
         setInputMsg('');
-        if (connected) {
-            sendMessageWS(selectedRoom.id, content);
-        } else {
-            try {
-                const res = await chatApi.sendMessage(selectedRoom.id, content);
-                if (res.success) setMessages(prev => [...prev, res.data]);
-            } catch (err) {
-                console.error('Lỗi gửi tin nhắn:', err);
+        try {
+            const res = await chatApi.sendMessage(selectedRoom.id, content);
+            if (res.success) {
+                setMessages(prev => {
+                    const exists = prev.find(m => m.id === res.data.id);
+                    if (exists) return prev;
+                    return [...prev, res.data];
+                });
             }
+        } catch (err) {
+            console.error('Lỗi gửi tin nhắn:', err);
         }
     };
 

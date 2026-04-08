@@ -383,6 +383,14 @@ const AppRoutes = () => {
             </StaffRoute>
           }
         />
+        <Route
+          path="/staff/reviews"
+          element={
+            <StaffRoute>
+              <AdminReviews />
+            </StaffRoute>
+          }
+        />
       </Routes>
     </Router>
   );

@@ -142,17 +142,18 @@ const ChatPopup = () => {
 
         setInputMsg('');
 
-        if (connected) {
-            sendMessageWS(currentRoom.id, content);
-        } else {
-            try {
-                const res = await chatApi.sendMessage(currentRoom.id, content);
-                if (res.success) {
-                    setMessages(prev => [...prev, res.data]);
-                }
-            } catch (err) {
-                console.error('Lỗi gửi tin nhắn:', err);
+        try {
+            const res = await chatApi.sendMessage(currentRoom.id, content);
+            if (res.success) {
+                // Add message to local immediately
+                setMessages(prev => {
+                    const exists = prev.find(m => m.id === res.data.id);
+                    if (exists) return prev;
+                    return [...prev, res.data];
+                });
             }
+        } catch (err) {
+            console.error('Lỗi gửi tin nhắn:', err);
         }
     };
 
